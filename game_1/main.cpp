@@ -60,6 +60,8 @@
 
 #define SCREEN_WIDTH  640
 #define SCREEN_HEIGHT 480
+#define SPRITE_LEN_X 32
+#define SPRITE_LEN_Y 32
 
 /*
 
@@ -74,7 +76,14 @@ class olcDungeon : public olc::PixelGameEngine
 
 	const float CAMERA_PITCH = 12.12f;
 	const float CAMERA_ANGLE = 0.0f;
+	const float PLAYER_OFFSET_X = 0.25f;
+	const float PLAYER_OFFSET_Y = 0.25f;
+
+	static const int WORLD_HEIGHT = SCREEN_HEIGHT / 8;
+	static const int WORLD_WIDTH = SCREEN_WIDTH / 8;
+
 	const int VSPEED_X = 100;
+
 
 public:
 	olcDungeon()
@@ -108,7 +117,6 @@ public:
 		float x, y, z;
 	};
 
-
 	// A container of quads which need to be drawn to the screen
 	struct sQuad
 	{
@@ -125,7 +133,6 @@ public:
 	};
 
 	// Represents a cell
-	// Wall flag denotes its existence
 	struct sCell
 	{
 		bool wall = false;
@@ -192,10 +199,10 @@ public:
 	bool bVisible[6];
 
 	olc::vf2d vCursor = { 0.0f, 0.0f };
-	olc::vf2d vTileCursor = { 9.0f,0.0f };
+	olc::vi2d vTileCursor = { 9.0f,0.0f };
 
 	// Dimensions of each tile in spritesheet
-	olc::vi2d vTileSize = { 32, 32 };
+	olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
 
 	enum Face
 	{
@@ -220,7 +227,7 @@ public:
 		rendSelect.Load("./gfx/dng_select.png");
 		rendAllWalls.Load("./gfx/oldDungeon.png");
 
-		world.Create((int) SCREEN_WIDTH / 8, (int) SCREEN_HEIGHT / 8);
+		world.Create((int) WORLD_WIDTH , (int) WORLD_HEIGHT);
 
 		// World initialization
 		for (int y = 0; y < world.size.y; y++)
@@ -324,8 +331,8 @@ public:
 		for (int i = 0; i < 8; i++)
 		{
 			// Ensures that the camera's focal point is in the middle of the screen
-			projCube[i].x = worldCube[i].x + ScreenWidth() * 0.5f;
-			projCube[i].y = worldCube[i].y + ScreenHeight() * 0.5f;
+			projCube[i].x = worldCube[i].x + ScreenWidth() * PLAYER_OFFSET_X;
+			projCube[i].y = worldCube[i].y + ScreenHeight() * PLAYER_OFFSET_Y;
 			projCube[i].z = worldCube[i].z;
 		}
 
@@ -447,6 +454,9 @@ public:
 	*/
 	void GetSidesQuads(const float fAngle, const float fPitch, const float fScale, const vec3d& vCamera, std::vector<sQuad> &render)
 	{
+
+
+
 		auto MakeFace = [&](auto scell, std::array<vec3d, 8> pCube, int v1, int v2, int v3, int v4, Face f)
 		{
 			render.push_back({ pCube[v1], pCube[v2], pCube[v3], pCube[v4], scell.id[f] });
@@ -542,10 +552,15 @@ public:
 
 		// Rendering
 
+		// Alter VSpace
 		vSpace.x += VSPEED_X * fElapsedTime;
-		DrawStringDecal({ 0,48 }, "vSpace.x: " + std::to_string(vSpace.x));
+
 		//vSpace.y += 1.0 * fElapsedTime;
 		//vSpace.z += 1.0 * fElapsedTime;
+
+		DrawStringDecal({ 0,48 }, "vSpace.x: " + std::to_string(vSpace.x), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 0,56 }, "vSpace.y: " + std::to_string(vSpace.y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 0,64 }, "vSpace.z: " + std::to_string(vSpace.z), olc::CYAN, { 0.5f, 0.5f });
 
 		/*
 			1) Create dummy cube to extract visible face information
@@ -570,8 +585,6 @@ public:
 				// Each cell consists of 6 quads which are the faces of a cube. vQuads will contain any quads which make up that particular cube at location {x, y}
 				GetFaceQuads({ x, y }, fCameraAngle, fCameraPitch, fCameraZoom, vSpace, vQuads);
 
-
-				//DrawLine(q.points[0].x, q.points[0].y, q.points[3].x, q.points[3].y);
 			}
 
 		// GetCornerQuads(fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
@@ -605,6 +618,13 @@ public:
 				q.tile,
 				vTileSize
 			);*/
+			if ((int)vSpace.x % 2 == 0)
+			{
+				std::cout << "QPoints[0].x " << q.points[0].x << std::endl;
+				std::cout << "QPoints[0].y " << q.points[0].y << std::endl;
+				std::cout << "QPoints[1].x " << q.points[0].x << std::endl;
+				std::cout << "QPoints[1].y " << q.points[0].y << std::endl;
+			}
 			
 			if (!q.wall) {
 				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y);
@@ -621,7 +641,7 @@ public:
 		
 
 		/*
-			6) Draw selection "tile cube"	
+			6) Draw Player	
 		*/ 
 		vQuads.clear();
 		GetFaceQuads(vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
@@ -629,12 +649,9 @@ public:
 			DrawWarpedDecal(rendSelect.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
 		}
 
-		
-
+	
 		/*
-		
 			7) Draw some debug info
-		
 		*/
 		DrawStringDecal({ 0,0 }, "Cursor: " + std::to_string(vCursor.x) + ", " + std::to_string(vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
 		DrawStringDecal({ 0,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f });
