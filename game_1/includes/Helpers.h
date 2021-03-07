@@ -43,7 +43,7 @@ const float PLAYER_OFFSET_Y = 0.25f;
 		// The texture coordinate for this quad
 		olc::vf2d tile;
 
-		bool player = false;
+		bool gravEnabled = false;
 
 		// TODO - add which wall this is so we can draw around its base accordingly
 

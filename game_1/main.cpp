@@ -82,7 +82,9 @@ class olcDungeon : public olc::PixelGameEngine
 	const int VSPEED_X = 100;
 
 	// Player's offset from the cursor
-	const float pDeltaY = -100.0f;
+	float pDeltaY = -100.0f;
+	float gravity = 5.0f;
+	float thrust = 8.0f;
 
 
 public:
@@ -357,32 +359,31 @@ public:
 	The player comes with its position tracker
 */
 	void GetPlayerQuads(const olc::vi2d& vCell, const float fAngle, const float fPitch,
-		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, bool player = false)
+		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, float fElapsedTime)
 	{
 		std::array<vec3d, 8> cursCube = CreateCube(vCell, fAngle, fPitch, fScale, vSpace);
 		std::array<vec3d, 8> playCube = CreateCube(vCell, fAngle, fPitch, fScale, vSpace);
 
-		if(player)
-			for (auto &pc : playCube)
-			{
-		
-				pc.y -= pDeltaY;
-		
-			}
+		// Offset the player from the cursor
+		for (auto &pc : playCube)
+		{
+			// The players separation from its ground marker
+			pc.y += pDeltaY;
+		}
 
 		auto& cell = world.GetCell(vCell);
 		// Defines the faces of the cube. Each int is an ID of which vertex we want to acknowledge. Face comes from enum.
 		// The projCube pushed onto our render vector will now contain those vertices in screen-space
-		auto MakeEntity = [&](int v1, int v2, int v3, int v4, Face f, std::array<vec3d, 8> cube)
+		auto MakeEntity = [&](int v1, int v2, int v3, int v4, Face f, std::array<vec3d, 8> cube, bool gravEnabled)
 		{
 			// id[f] is one of the 6 faces, determined at the end of this function (these, 4, vertices, are, thisFaceQuad)
-			render.push_back({ cube[v1], cube[v2], cube[v3], cube[v4], cell.id[f] });
+			render.push_back({ cube[v1], cube[v2], cube[v3], cube[v4], cell.id[f], gravEnabled });
 		};
 
 		/*if (bVisible[Face::Floor] && !player)*/ 
-		MakeEntity(4, 0, 1, 5, Face::Floor, cursCube);
+		MakeEntity(4, 0, 1, 5, Face::Floor, cursCube, false);
 		/*if (bVisible[Face::North] && player)*/ 
-		MakeEntity(6, 5, 4, 7, Face::North, playCube);
+		MakeEntity(6, 5, 4, 7, Face::North, playCube, true);
 
 	}
 
@@ -441,11 +442,14 @@ public:
 		if (player.vCursor.x >= world.size.x) player.vCursor.x = world.size.x - 1;
 		if (player.vCursor.y >= world.size.y) player.vCursor.y = world.size.y - 1;
 
-		// Place block with space
-		if (GetKey(olc::Key::SPACE).bPressed)
+
+		// Apply gravity to the situation, or thrust!
+		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			world.GetCell(player.vCursor).wall = !world.GetCell(player.vCursor).wall;
+			pDeltaY -= thrust;
 		}
+		else if (pDeltaY < 0) 
+			pDeltaY += (gravity * fElapsedTime);
 
 		// Rendering
 		
@@ -454,6 +458,8 @@ public:
 
 		//vSpace.y += 1.0 * fElapsedTime;
 		//vSpace.z += 1.0 * fElapsedTime;
+
+		
 
 		/*
 			1) Create dummy cube to extract visible face information
@@ -527,22 +533,21 @@ public:
 			6) Draw Player	
 		*/ 
 		vQuads.clear();
-		GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, true);
+		GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
 		for (auto& q : vQuads) {
-			
 			DrawWarpedDecal(rendSelect.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
-
 		}
 
-		DrawStringDecal({ 500,0  + 20}, "P-0: (" + std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,8  + 20}, "P-1: (" + std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,16 + 20 }, "P-2: (" + std::to_string(vQuads[1].points[2].x) + ", " + std::to_string(vQuads[1].points[2].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,24 + 20 }, "P-3: (" + std::to_string(vQuads[1].points[3].x) + ", " + std::to_string(vQuads[1].points[3].y), olc::CYAN, { 0.5f, 0.5f });
-
-		DrawStringDecal({ 500,32 + 20 }, "V-0: (" + std::to_string(vQuads[0].points[0].x) + ", " + std::to_string(vQuads[0].points[0].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,40 + 20 }, "V-1: (" + std::to_string(vQuads[0].points[1].x) + ", " + std::to_string(vQuads[0].points[1].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,48 + 20 }, "V-2: (" + std::to_string(vQuads[0].points[2].x) + ", " + std::to_string(vQuads[0].points[2].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,56 + 20 }, "V-3: (" + std::to_string(vQuads[0].points[3].x) + ", " + std::to_string(vQuads[0].points[3].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,16 + 20 }, "P-2: " + std::to_string(vQuads[1].points[2].x) + ", " + std::to_string(vQuads[1].points[2].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,24 + 20 }, "P-3: " + std::to_string(vQuads[1].points[3].x) + ", " + std::to_string(vQuads[1].points[3].y), olc::CYAN, { 0.5f, 0.5f });
+											  
+		DrawStringDecal({ 500,32 + 20 }, "V-0: " + std::to_string(vQuads[0].points[0].x) + ", " + std::to_string(vQuads[0].points[0].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,40 + 20 }, "V-1: " + std::to_string(vQuads[0].points[1].x) + ", " + std::to_string(vQuads[0].points[1].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,48 + 20 }, "V-2: " + std::to_string(vQuads[0].points[2].x) + ", " + std::to_string(vQuads[0].points[2].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,56 + 20 }, "V-3: " + std::to_string(vQuads[0].points[3].x) + ", " + std::to_string(vQuads[0].points[3].y), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,64 + 20 }, "Gravity: " + std::to_string(gravity), olc::RED, { 0.5f, 0.5f });
 
 		/*
 			7) Draw some debug info
