@@ -58,6 +58,9 @@
 #define OLC_PGE_APPLICATION
 #include "includes/olcPixelGameEngine.h"
 
+#define SCREEN_WIDTH  640
+#define SCREEN_HEIGHT 480
+
 /*
 
 	NOTE! This program requires a tile spritesheet NOT
@@ -68,6 +71,11 @@
 
 class olcDungeon : public olc::PixelGameEngine
 {
+
+	const float CAMERA_PITCH = 12.12f;
+	const float CAMERA_ANGLE = 0.0f;
+	const int VSPEED_X = 100;
+
 public:
 	olcDungeon()
 	{
@@ -123,9 +131,8 @@ public:
 		bool wall = false;
 
 		// ID represents each face of a cube in the world
-		olc::vi2d id[6]{  }; 
+		olc::vi2d id[6]{  };  // e.g. { {0,198}, {0,198}, {0,198}, {0,198}, {0,198}, {0,198} } means each face corresponds to {0,9} on the spritesheet, where each cell is 32x32 pixels
 	};
-
 
 	/*
 		Round
@@ -143,6 +150,8 @@ public:
 		void Create(int w, int h)
 		{
 			size = { w, h };
+
+			// vCells is now a vector of sCells
 			vCells.resize(w * h);
 		}
 
@@ -173,16 +182,17 @@ public:
 	Renderable rendAllWalls;
 
 	// Camera parameters
-	olc::vf2d vCameraPos = { 0.0f, 0.0f };
-	float fCameraAngle = 0.0f;					// Allows rotation of the world
-	float fCameraAngleTarget = fCameraAngle;	
-	float fCameraPitch = 5.5f;					// Rotation in X axis
-	float fCameraZoom = 16.0f;
+	olc::vf2d vCameraPos;
+	float fCameraAngle;					// Allows rotation of the world
+	float fCameraAngleTarget;
+	float fCameraPitch;					// Rotation in X axis
+	float fCameraZoom;
+	vec3d vSpace;						// Initialized to the camera's initial vector. Used to move the world in relation to the camera
 
 	bool bVisible[6];
 
-	olc::vi2d vCursor = { 0, 0 };
-	olc::vi2d vTileCursor = { 9,0 };
+	olc::vf2d vCursor = { 0.0f, 0.0f };
+	olc::vf2d vTileCursor = { 9.0f,0.0f };
 
 	// Dimensions of each tile in spritesheet
 	olc::vi2d vTileSize = { 32, 32 };
@@ -200,10 +210,17 @@ public:
 public:
 	bool OnUserCreate() override
 	{
+		// The initial position of the World
+		vSpace = { vCameraPos.x, 0.0f, vCameraPos.y };
+
+		// The initial position of the camera in the world		
+		vCameraPos = { vCursor.x + 0.5f, vCursor.y + 0.5f };
+		vCameraPos *= fCameraZoom;
+
 		rendSelect.Load("./gfx/dng_select.png");
 		rendAllWalls.Load("./gfx/oldDungeon.png");
 
-		world.Create(120, 120);
+		world.Create((int) SCREEN_WIDTH / 8, (int) SCREEN_HEIGHT / 8);
 
 		// World initialization
 		for (int y = 0; y < world.size.y; y++)
@@ -213,14 +230,17 @@ public:
 				world.GetCell({ x, y }).wall = false;
 
 				// Assign each face a tile from the spritesheet
-				world.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ 0, 9 } *vTileSize;
-				world.GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 9 } *vTileSize;
-				world.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 9, 0 } *vTileSize;
-				world.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 9 } *vTileSize;
-				world.GetCell({ x, y }).id[Face::West] = olc::vi2d{ 0, 9 } *vTileSize;
-				world.GetCell({ x, y }).id[Face::East] = olc::vi2d{ 0, 9 } *vTileSize;
+				world.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ 0, 9 } * vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
+				world.GetCell({ x, y }).id[Face::Top]   = olc::vi2d{ 0, 9 } * vTileSize;
+				world.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 9, 0 } * vTileSize;
+				world.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 9 } * vTileSize;
+				world.GetCell({ x, y }).id[Face::West]  = olc::vi2d{ 0, 9 } * vTileSize;
+				world.GetCell({ x, y }).id[Face::East]  = olc::vi2d{ 0, 9 } * vTileSize;
 
 			}
+
+		resetCamera();
+
 		return true;
 	}
 
@@ -236,7 +256,7 @@ public:
 		@arg fScale	- Zoom
 		@arg vCamera - 3D location of the camera
 	*/
-	std::array<vec3d, 8> CreateCube(const olc::vi2d& vCell, const float fAngle, const float fPitch, const float fScale, const vec3d& vCamera)
+	std::array<vec3d, 8> CreateCube(const olc::vi2d& vCell, const float fAngle, const float fPitch, const float fScale, const vec3d& vSpace)
 	{
 		// Many cubes
 		std::array<vec3d, 8> unitCube, rotCube, worldCube, projCube;
@@ -254,9 +274,9 @@ public:
 		// Translate Cube in X-Z Plane
 		for (int i = 0; i < 8; i++)
 		{
-			unitCube[i].x += (vCell.x * fScale - vCamera.x);
-			unitCube[i].y += -vCamera.y;
-			unitCube[i].z += (vCell.y * fScale - vCamera.z);
+			unitCube[i].x += (vCell.x * fScale - vSpace.x);
+			unitCube[i].y += -vSpace.y;
+			unitCube[i].z += (vCell.y * fScale - vSpace.z);
 		}
 
 		// Rotate Cube in Y-Axis around origin
@@ -338,15 +358,15 @@ public:
 		@function
 		Get the quads of a cube at location (cell)
 		Takes in the cell's X and Y, camera information, and will append
-		to a vector (last param) any quads which represent a particular cube (at vCell)
+		to a vector (&render) any quads which represent a particular cube (at vCell)
 	*/
 	void GetFaceQuads(
 		const olc::vi2d& vCell, const float fAngle, const float fPitch, 
-		const float fScale, const vec3d& vCamera, std::vector<sQuad> &render
+		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render
 	)
 	{
 		// Essentially 8 3d vectors generated where we want them to be
-		std::array<vec3d, 8> projCube = CreateCube(vCell, fAngle, fPitch, fScale, vCamera);
+		std::array<vec3d, 8> projCube = CreateCube(vCell, fAngle, fPitch, fScale, vSpace);
 
 		auto& cell = world.GetCell(vCell);
 
@@ -443,6 +463,13 @@ public:
 			}
 	}
 
+	void resetCamera() {
+		olc::vf2d vCameraPos = { 0.0f, 0.0f };
+		fCameraAngle = CAMERA_ANGLE;					// Allows rotation of the world
+		fCameraAngleTarget = fCameraAngle;
+		fCameraPitch = CAMERA_PITCH;					// Rotation in X axis
+		fCameraZoom = 16.0f;
+	}
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
@@ -470,6 +497,9 @@ public:
 		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
 		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
 
+		if (GetKey(olc::Key::R).bPressed) 
+			resetCamera();
+
 		// Numpad keys used to rotate camera to fixed angles
 		if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
 		if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
@@ -477,7 +507,6 @@ public:
 		if (GetKey(olc::Key::U).bPressed) fCameraAngleTarget = 3.14159f * 0.75f;
 		if (GetKey(olc::Key::Y).bPressed) fCameraAngleTarget = 3.14159f * 1.0f;
 		if (GetKey(olc::Key::T).bPressed) fCameraAngleTarget = 3.14159f * 1.25f;
-		if (GetKey(olc::Key::R).bPressed) fCameraAngleTarget = 3.14159f * 1.5f;
 		if (GetKey(olc::Key::L).bPressed) fCameraAngleTarget = 3.14159f * 1.75f;
 
 		// Numeric keys apply selected tile to specific face
@@ -492,10 +521,14 @@ public:
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
 
 		// Arrow keys to move the selection cursor around map (boundary checked)
-		if (GetKey(olc::Key::LEFT).bPressed) vCursor.x--;
-		if (GetKey(olc::Key::RIGHT).bPressed) vCursor.x++;
-		if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
-		if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
+		// if (GetKey(olc::Key::LEFT).bPressed) vCursor.x--;
+		if (GetKey(olc::Key::LEFT).bHeld) vCursor.x -= 2.0f * fElapsedTime;
+		// if (GetKey(olc::Key::RIGHT).bPressed) vCursor.x++;
+		if (GetKey(olc::Key::RIGHT).bHeld) vCursor.x += 2.0f * fElapsedTime;
+		// if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
+		if (GetKey(olc::Key::UP).bHeld) vCursor.y -= 2.0f * fElapsedTime;
+		// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
+		if (GetKey(olc::Key::DOWN).bHeld) vCursor.y += 2.0f * fElapsedTime;
 		if (vCursor.x < 0) vCursor.x = 0;
 		if (vCursor.y < 0) vCursor.y = 0;
 		if (vCursor.x >= world.size.x) vCursor.x = world.size.x - 1;
@@ -507,18 +540,19 @@ public:
 			world.GetCell(vCursor).wall = !world.GetCell(vCursor).wall;
 		}
 
-		// Position camera in world		
-		vCameraPos = { vCursor.x + 0.5f, vCursor.y + 0.5f };
-		vCameraPos *= fCameraZoom;
-
 		// Rendering
+
+		vSpace.x += VSPEED_X * fElapsedTime;
+		DrawStringDecal({ 0,48 }, "vSpace.x: " + std::to_string(vSpace.x));
+		//vSpace.y += 1.0 * fElapsedTime;
+		//vSpace.z += 1.0 * fElapsedTime;
 
 		/*
 			1) Create dummy cube to extract visible face information
 		*/
 
 		// Cull faces that cannot be seen
-		std::array<vec3d, 8> cullCube = CreateCube({ 0, 0 }, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y });
+		std::array<vec3d, 8> cullCube = CreateCube({ 0, 0 }, fCameraAngle, fCameraPitch, fCameraZoom, vSpace);
 		// Sets the booleans determining which faces we can see
 		CalculateVisibleFaces(cullCube);
 
@@ -529,13 +563,12 @@ public:
 		// A container filled with the things we're going to draw
 		std::vector<sQuad> vQuads;
 
-
 		// Non optimized. We're iterating over the whole world and redrawing it all the time.
 		for (int y = 0; y < world.size.y; y++)
 			for (int x = 0; x < world.size.x; x++) {
 
-				// Each cell consists of 6 quads which are the faces of a cube. vQuads will contain any quads which represent that particular cube at location {x, y}
-				GetFaceQuads({ x, y }, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads);
+				// Each cell consists of 6 quads which are the faces of a cube. vQuads will contain any quads which make up that particular cube at location {x, y}
+				GetFaceQuads({ x, y }, fCameraAngle, fCameraPitch, fCameraZoom, vSpace, vQuads);
 
 
 				//DrawLine(q.points[0].x, q.points[0].y, q.points[3].x, q.points[3].y);
@@ -565,34 +598,20 @@ public:
 		for (auto& q : vQuads) {
 
 			// PGE function. Takes screen-space quad coordinates and texture coordinates, and draws them appropriately
-			DrawPartialWarpedDecal
+	/*		DrawPartialWarpedDecal
 			(
 				rendAllWalls.decal,
 				{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
 				q.tile,
 				vTileSize
-			);
-
-			//float qPoint0x = q.points[0].x + fElapsedTime;
-			//float qPoint1x = q.points[1].x + fElapsedTime;
-			//float qPoint2x = q.points[2].x + fElapsedTime;
-			//float qPoint3x = q.points[3].x + fElapsedTime;
-
-			//float qPoint0y = q.points[0].y + fElapsedTime;
-			//float qPoint1y = q.points[1].y + fElapsedTime;
-			//float qPoint2y = q.points[2].y + fElapsedTime;
-			//float qPoint3y = q.points[3].y + fElapsedTime;
-
+			);*/
 			
 			if (!q.wall) {
 				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y);
 				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y);
 			}
 
-			
-
 		}
-
 
 
 		/*
@@ -629,7 +648,7 @@ public:
 int main()
 {
 	olcDungeon demo;
-	if (demo.Construct(640, 480, 2, 2, true))
+	if (demo.Construct(SCREEN_WIDTH, SCREEN_HEIGHT, 2, 2, false))
 		demo.Start();
 	return 0;
 }
