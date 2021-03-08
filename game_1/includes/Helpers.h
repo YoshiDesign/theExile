@@ -45,6 +45,8 @@ const float PLAYER_OFFSET_Y = 0.25f;
 
 		bool gravEnabled = false;
 
+		bool isPlayer = false;
+
 		// TODO - add which wall this is so we can draw around its base accordingly
 
 	};
