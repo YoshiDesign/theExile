@@ -80,9 +80,9 @@ class olcDungeon : public olc::PixelGameEngine
 	const int WORLD_WIDTH = SCREEN_WIDTH / 8;
 	const int MAP_LEFT_EDGE = 0;
 	const int MAP_TOP_EDGE = -133;
-	const int WORLD_SCALE = 30;
-	const int WORLD_SHIFT = 1010;
-	const int PLAYER_SCALE = 6;
+	int WORLD_SCALE = 120;
+	int WORLD_SHIFT = 1058;
+	int PLAYER_SCALE = 6;
 	const int VSPEED_X = 415;
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
@@ -90,7 +90,7 @@ class olcDungeon : public olc::PixelGameEngine
 	// Player's offset from the cursor
 	float pDeltaY = -100.0f;
 	float gravity = 9.0f;
-	float thrust = 16.0f;
+	float thrust = 36.0f;
 	float ticks = 0.0f;
 
 public:
@@ -340,7 +340,7 @@ public:
 		//    the first transformation of CreateCube() ->
 
 		// Don't render things that exit the map area, render them on the other side of the plane
-		if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE - 200) {
+		if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE - 800) {
 			// Causes the map to regenerate. Super dirty.
 			if (vSpace.x > 0 && (int)vSpace.x > WORLD_SHIFT)
 				vSpace.x = 800;
@@ -431,9 +431,14 @@ public:
 
 		if (GetKey(olc::Key::R).bPressed) 
 			resetCamera();
-
+		if (GetKey(olc::Key::P).bHeld) WORLD_SHIFT++;
+		if (GetKey(olc::Key::O).bHeld) WORLD_SHIFT--;
+		if (GetKey(olc::Key::I).bHeld) PLAYER_SCALE--;
+		if (GetKey(olc::Key::U).bHeld) PLAYER_SCALE++;
+		if (GetKey(olc::Key::L).bHeld) WORLD_SCALE++;
+		if (GetKey(olc::Key::K).bHeld) WORLD_SCALE--;
 		// Numpad keys used to rotate camera to fixed angles
-		//if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
+		// if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
 		//if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
 		//if (GetKey(olc::Key::I).bPressed) fCameraAngleTarget = 3.14159f * 0.5f;
 		//if (GetKey(olc::Key::U).bPressed) fCameraAngleTarget = 3.14159f * 0.75f;
@@ -613,8 +618,10 @@ public:
 		DrawStringDecal({ 10,374 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::WHITE, { 0.7f, 0.7f });
 		DrawStringDecal({ 10,386 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::WHITE, { 0.7f, 0.7f });
 
-		DrawStringDecal({ 10,398 }, "Cell (0,y) To Pixels: " + std::to_string(0 * fCameraZoom - vSpace.x), olc::WHITE, { 0.7f, 0.7f });
-		DrawStringDecal({ 10,410 }, "Cell (80,y) To Pixels: " + std::to_string(79 * fCameraZoom - vSpace.x), olc::WHITE, { 0.7f, 0.7f });
+		DrawStringDecal({ 500,374 }, "wShift: " + std::to_string(WORLD_SHIFT), olc::WHITE, { 0.7f, 0.7f });
+		
+		DrawStringDecal({ 500,386 }, "pScale: " + std::to_string(PLAYER_SCALE), olc::WHITE, { 0.7f, 0.7f });
+		DrawStringDecal({ 500,398 }, "wScale: " + std::to_string(WORLD_SCALE), olc::WHITE, { 0.7f, 0.7f });
 
 		// DrawLine((0 * fCameraZoom - vSpace.x) + ScreenWidth() * PLAYER_OFFSET_X, (0 * fCameraZoom - vSpace.y) + ScreenWidth() * PLAYER_OFFSET_Y, (WORLD_WIDTH * fCameraZoom - vSpace.x) + ScreenWidth() * PLAYER_OFFSET_X, (WORLD_HEIGHT * fCameraZoom - vSpace.y) + ScreenWidth() * PLAYER_OFFSET_Y, olc::RED);
 
