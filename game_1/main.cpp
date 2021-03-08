@@ -402,28 +402,20 @@ public:
 		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
 
 		// QZ Keys to zoom in or out
-		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
-		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
+		// if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
+		// if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
 
 		if (GetKey(olc::Key::R).bPressed) 
 			resetCamera();
 
 		// Numpad keys used to rotate camera to fixed angles
-		if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
-		if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
-		if (GetKey(olc::Key::I).bPressed) fCameraAngleTarget = 3.14159f * 0.5f;
-		if (GetKey(olc::Key::U).bPressed) fCameraAngleTarget = 3.14159f * 0.75f;
-		if (GetKey(olc::Key::Y).bPressed) fCameraAngleTarget = 3.14159f * 1.0f;
-		if (GetKey(olc::Key::T).bPressed) fCameraAngleTarget = 3.14159f * 1.25f;
-		if (GetKey(olc::Key::L).bPressed) fCameraAngleTarget = 3.14159f * 1.75f;
-
-		// Numeric keys apply selected tile to specific face
-		//if (GetKey(olc::Key::K1).bPressed) world.GetCell(vCursor).id[Face::North] = vTileCursor * vTileSize;
-		//if (GetKey(olc::Key::K2).bPressed) world.GetCell(vCursor).id[Face::East] = vTileCursor * vTileSize;
-		//if (GetKey(olc::Key::K3).bPressed) world.GetCell(vCursor).id[Face::South] = vTileCursor * vTileSize;
-		//if (GetKey(olc::Key::K4).bPressed) world.GetCell(vCursor).id[Face::West] = vTileCursor * vTileSize;
-		//if (GetKey(olc::Key::K5).bPressed) world.GetCell(vCursor).id[Face::Floor] = vTileCursor * vTileSize;
-		//if (GetKey(olc::Key::K6).bPressed) world.GetCell(vCursor).id[Face::Top] = vTileCursor * vTileSize;
+		//if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
+		//if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
+		//if (GetKey(olc::Key::I).bPressed) fCameraAngleTarget = 3.14159f * 0.5f;
+		//if (GetKey(olc::Key::U).bPressed) fCameraAngleTarget = 3.14159f * 0.75f;
+		//if (GetKey(olc::Key::Y).bPressed) fCameraAngleTarget = 3.14159f * 1.0f;
+		//if (GetKey(olc::Key::T).bPressed) fCameraAngleTarget = 3.14159f * 1.25f;
+		//if (GetKey(olc::Key::L).bPressed) fCameraAngleTarget = 3.14159f * 1.75f;
 
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
@@ -437,6 +429,8 @@ public:
 		if (GetKey(olc::Key::UP).bHeld) player.vCursor.y -= 15.0f * fElapsedTime;
 		// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
 		if (GetKey(olc::Key::DOWN).bHeld) player.vCursor.y += 15.0f * fElapsedTime;
+
+
 		if (player.vCursor.x < 0) player.vCursor.x = 0;
 		if (player.vCursor.y < 0) player.vCursor.y = 0;
 		if (player.vCursor.x >= world.size.x) player.vCursor.x = world.size.x - 1;
@@ -446,9 +440,10 @@ public:
 		// Apply gravity to the situation, or thrust!
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			pDeltaY -= thrust;
+			if (pDeltaY > -133)
+				pDeltaY -= thrust * fElapsedTime;
 		}
-		else if (pDeltaY < 0) 
+		else if (pDeltaY < 0) // Delta is negative
 			pDeltaY += (gravity * fElapsedTime);
 
 		// Rendering
@@ -458,8 +453,6 @@ public:
 
 		//vSpace.y += 1.0 * fElapsedTime;
 		//vSpace.z += 1.0 * fElapsedTime;
-
-		
 
 		/*
 			1) Create dummy cube to extract visible face information
@@ -548,6 +541,7 @@ public:
 		DrawStringDecal({ 500,48 + 20 }, "V-2: " + std::to_string(vQuads[0].points[2].x) + ", " + std::to_string(vQuads[0].points[2].y), olc::CYAN, { 0.5f, 0.5f });
 		DrawStringDecal({ 500,56 + 20 }, "V-3: " + std::to_string(vQuads[0].points[3].x) + ", " + std::to_string(vQuads[0].points[3].y), olc::CYAN, { 0.5f, 0.5f });
 		DrawStringDecal({ 500,64 + 20 }, "Gravity: " + std::to_string(gravity), olc::RED, { 0.5f, 0.5f });
+		DrawStringDecal({ 500,72 + 20 }, "Delta-Y: " + std::to_string(pDeltaY), olc::WHITE, { 0.5f, 0.5f });
 
 		/*
 			7) Draw some debug info
