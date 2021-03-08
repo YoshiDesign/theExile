@@ -78,8 +78,10 @@ class olcDungeon : public olc::PixelGameEngine
 {
 	const int WORLD_HEIGHT = SCREEN_HEIGHT / 8;
 	const int WORLD_WIDTH = SCREEN_WIDTH / 8;
+	const int MAP_LEFT_EDGE = 0;
+	const int MAP_TOP_EDGE = -133;
 
-	const int VSPEED_X = 25;
+	const int VSPEED_X = 125;
 
 	// Player's offset from the cursor
 	float pDeltaY = -100.0f;
@@ -123,9 +125,16 @@ public:
 				return NullCell;
 		}
 
+		void update()
+		{
+		
+			
+		
+		}
 
 	public:
 		olc::vi2d size;
+		int distance;
 
 	private:
 		// The cells of the world
@@ -324,7 +333,14 @@ public:
 		// 2. vCell is the {x,y} in world space of our cell. In order to know
 		//    where it should be drawn on the screen( screen space ), it must undergo at least
 		//    the first transformation of CreateCube() ->
-		//    
+
+		// Don't render things that exit the map area, render them on the other side of the plane
+		if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE) {
+			return;
+		}
+			
+
+
 		std::array<vec3d, 8> projCube = CreateCube(vCell, fAngle, fPitch, fScale, vSpace);
 
 		// 4. Every vertex of the cube is now properly positioned
@@ -346,10 +362,10 @@ public:
 		if (bVisible[Face::North] && player) MakeFace(6, 5, 4, 7, Face::North);
 
 		// As of right now these are always false
-		if (bVisible[Face::South]) MakeFace(3, 0, 1, 2, Face::South);
-		if (bVisible[Face::East]) MakeFace(7, 4, 0, 3, Face::East);
-		if (bVisible[Face::West]) MakeFace(2, 1, 5, 6, Face::West);
-		if (bVisible[Face::Top]) MakeFace(7, 3, 2, 6, Face::Top);
+		//if (bVisible[Face::South]) MakeFace(3, 0, 1, 2, Face::South);
+		//if (bVisible[Face::East]) MakeFace(7, 4, 0, 3, Face::East);
+		//if (bVisible[Face::West]) MakeFace(2, 1, 5, 6, Face::West);
+		//if (bVisible[Face::Top]) MakeFace(7, 3, 2, 6, Face::Top);
 		// }
 	}
 
@@ -370,7 +386,9 @@ public:
 			pc.y += pDeltaY;
 		}
 
+		// Get the cell that the cursor sits on
 		auto& cell = world.GetCell(vCell);
+
 		// Defines the faces of the cube. Each int is an ID of which vertex we want to acknowledge. Face comes from enum.
 		// The projCube pushed onto our render vector will now contain those vertices in screen-space
 		auto MakeEntity = [&](int v1, int v2, int v3, int v4, Face f, std::array<vec3d, 8> cube, bool gravEnabled)
@@ -439,7 +457,7 @@ public:
 		// Apply gravity to the situation, or thrust
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
-			if (pDeltaY > -133)
+			if (pDeltaY > MAP_TOP_EDGE)
 				pDeltaY -= thrust * fElapsedTime;
 		}
 		else if (pDeltaY < 0) // Delta is negative
