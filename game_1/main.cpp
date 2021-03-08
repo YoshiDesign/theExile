@@ -83,6 +83,8 @@ class olcDungeon : public olc::PixelGameEngine
 	int WORLD_SCALE = 120;
 	int WORLD_SHIFT = 1058;
 	int PLAYER_SCALE = 6;
+	int EPOCH = 0;
+	int EPOCH_MOD = 90;
 	const int VSPEED_X = 415;
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
@@ -91,7 +93,7 @@ class olcDungeon : public olc::PixelGameEngine
 	float pDeltaY = -100.0f;
 	float gravity = 9.0f;
 	float thrust = 36.0f;
-	float ticks = 0.0f;
+	int ticks = 0;
 
 public:
 	olcDungeon()
@@ -154,9 +156,9 @@ public:
 	World world;
 	Renderable rendSelect;
 	Renderable rendAllWalls;
+	std::vector<World> Planes;
 
 	vec3d vSpace;	// Initialized using the camera's initial vector. Used to move the world in relation to the camera
-
 	bool bVisible[6];
 
 	// Dimensions of each tile in spritesheet
@@ -177,7 +179,7 @@ public:
 	{
 		// The initial position of the World
 		vSpace = { vCameraPos.x, 0.0f, vCameraPos.y };
-		std::cout << "Camera: (" << vCameraPos.x << ", " << vCameraPos.y << ")";
+		std::cout << "Camera: (" << vCameraPos.x << ", " << vCameraPos.y << ")" << std::endl;
 
 		// The initial position of the camera in the world		
 		vCameraPos = { player.vCursor.x + 0.5f, player.vCursor.y + 0.5f };
@@ -186,28 +188,43 @@ public:
 		rendSelect.Load("./gfx/holyship.png");
 		rendAllWalls.Load("./gfx/grounds.png");
 
-		world.Create((int) WORLD_WIDTH , (int) WORLD_HEIGHT);
-
-		// World initialization
-		for (int y = 0; y < world.size.y; y++)
-			for (int x = 0; x < world.size.x; x++)
-			{
-				// Nothing is a wall from the start
-				world.GetCell({ x, y }).wall = false;
-
-				// Assign each face a tile from the spritesheet
-				world.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } * vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
-				world.GetCell({ x, y }).id[Face::Top]   = olc::vi2d{ 0, 0 } * vTileSize;
-				world.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } * vTileSize;
-				world.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } * vTileSize;
-				world.GetCell({ x, y }).id[Face::West]  = olc::vi2d{ 0, 0 } * vTileSize;
-				world.GetCell({ x, y }).id[Face::East]  = olc::vi2d{ 0, 0 } * vTileSize;
-
-			}
+		NewWorld(Planes);
 
 		resetCamera();
 
 		return true;
+	}
+
+
+	void NewWorld(std::vector<World>& planeVector)
+	{
+
+		do {
+
+			world.Create((int)WORLD_WIDTH, (int)WORLD_HEIGHT);
+
+			// World initialization
+			for (int y = 0; y < world.size.y; y++)
+				for (int x = 0; x < world.size.x; x++)
+				{
+					// Nothing is a wall from the start
+					world.GetCell({ x, y }).wall = false;
+
+					// Assign each face a tile from the spritesheet
+					world.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
+					world.GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 0 } *vTileSize;
+					world.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } *vTileSize;
+					world.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } *vTileSize;
+					world.GetCell({ x, y }).id[Face::West] = olc::vi2d{ 0, 0 } *vTileSize;
+					world.GetCell({ x, y }).id[Face::East] = olc::vi2d{ 0, 0 } *vTileSize;
+
+				}
+
+			planeVector.push_back(world);
+
+		} while (planeVector.size() != 2);
+
+		
 	}
 
 
@@ -332,7 +349,7 @@ public:
 	*/
 	void GetWorldQuads(
 		olc::vi2d& vCell, const float fAngle, const float fPitch, 
-		const float fScale, vec3d& vSpace, std::vector<sQuad> &render, bool player = false
+		const float fScale, vec3d& vSpace, std::vector<sQuad> &render, int row
 	)
 	{
 		// 2. vCell is the {x,y} in world space of our cell. In order to know
@@ -340,13 +357,16 @@ public:
 		//    the first transformation of CreateCube() ->
 
 		// Don't render things that exit the map area, render them on the other side of the plane
-		if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE - 800) {
-			// Causes the map to regenerate. Super dirty.
-			if (vSpace.x > 0 && (int)vSpace.x > WORLD_SHIFT)
-				vSpace.x = 800;
-			vCell.x += WORLD_WIDTH;
-			//return;
-		}
+		//if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE) {
+		//	return;
+		//}
+
+		//if (row = WORLD_WIDTH - 1)
+		//	if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE) {
+		//		vSpace.x = 0;
+		//		return;
+		//	}
+
 
 		std::array<vec3d, 8> projCube = CreateCube(vCell, fAngle, fPitch, fScale, vSpace);
 
@@ -365,8 +385,8 @@ public:
 		// 5. Determine which faces are visible, and subesequently their vertices. e.g. (3,0,1,2 is the South face's vertices)
 
 		// As of right now these always true
-		if (bVisible[Face::Floor] && !player) MakeFace(4, 0, 1, 5, Face::Floor);
-		if (bVisible[Face::North] && player) MakeFace(6, 5, 4, 7, Face::North);
+		if (bVisible[Face::Floor]) MakeFace(4, 0, 1, 5, Face::Floor);
+		//if (bVisible[Face::North]) MakeFace(6, 5, 4, 7, Face::North);
 
 		// As of right now these are always false
 		//if (bVisible[Face::South]) MakeFace(3, 0, 1, 2, Face::South);
@@ -375,6 +395,16 @@ public:
 		//if (bVisible[Face::Top]) MakeFace(7, 3, 2, 6, Face::Top);
 		// }
 	}
+
+
+	olc::vi2d cLoc(int index, float spaceX, float spaceY) {
+
+		return {
+			(int)((index * (fCameraZoom + WORLD_SCALE) - spaceX) + ScreenWidth() * PLAYER_OFFSET_X),
+			(int)(-spaceY + (ScreenHeight() * PLAYER_OFFSET_Y) )
+		};
+	}
+
 
 	/*
 	@function GetPLayerQuads
@@ -426,10 +456,10 @@ public:
 		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
 
 		// QZ Keys to zoom in or out
-		 if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
-		 if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
+		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
+		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
 
-		if (GetKey(olc::Key::R).bPressed) 
+		if (GetKey(olc::Key::R).bPressed)
 			resetCamera();
 		if (GetKey(olc::Key::P).bHeld) WORLD_SHIFT++;
 		if (GetKey(olc::Key::O).bHeld) WORLD_SHIFT--;
@@ -437,6 +467,8 @@ public:
 		if (GetKey(olc::Key::U).bHeld) PLAYER_SCALE++;
 		if (GetKey(olc::Key::L).bHeld) WORLD_SCALE++;
 		if (GetKey(olc::Key::K).bHeld) WORLD_SCALE--;
+		if (GetKey(olc::Key::M).bHeld) EPOCH_MOD++;
+		if (GetKey(olc::Key::N).bHeld) EPOCH_MOD--;
 		// Numpad keys used to rotate camera to fixed angles
 		// if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
 		//if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
@@ -476,21 +508,33 @@ public:
 			pDeltaY += (gravity * fElapsedTime);
 
 		// Rendering
-		
-		// Alter VSpace
-		vSpace.x += VSPEED_X * fElapsedTime;
 
-		// Trying to count 1 for every row which gets removed. Not working
-		try {
-			if ( (int) vSpace.x % 38  == 0)
-				ticks++;
-		} 
-		catch (...)
+		// Alter VSpace
+		vSpace.x += (int)VSPEED_X * fElapsedTime;
+
+
+		//if ((int)(vSpace.x * .001) > 0 && (int)(vSpace.x * .001) % EPOCH_MOD == 0)
+		//{
+		//	std::cout << "Erasing world..." << std::endl;
+		//	Planes.erase(Planes.begin());
+		//	vSpace.x = 0;
+		//	epoch += 1;
+		//	std::cout << "Planes: " << Planes.size() << std::endl;
+		//}
+
+		//if (Planes.size() < 2) {
+		//	NewWorld(Planes);
+		//	std::cout << "Adding world..." << std::endl;
+		//	std::cout << "Planes: " << Planes.size() << std::endl;
+		//}
+
+		if (cLoc(WORLD_WIDTH, vSpace.x, vSpace.y).x < 0)
 		{
-			throw std::runtime_error("Division by zero. Goodbye, world.");
+			EPOCH++;
+			Planes.erase(Planes.begin());
+			vSpace.x = 0;
+			NewWorld(Planes);
 		}
-		//vSpace.y += 1.0 * fElapsedTime;
-		//vSpace.z += 1.0 * fElapsedTime;
 
 		/*
 			1) Create dummy cube to extract visible face information
@@ -503,23 +547,26 @@ public:
 
 		/*
 			2) Get all visible sides of all visible "tile cubes"
-		*/ 
+		*/
 
 		// A container filled with the things we're going to draw
 		std::vector<sQuad> vQuads;
 
 		// Non optimized. We're iterating over the whole world and redrawing it all the time.
-		for (int y = 0; y < world.size.y; y++)
-			for (int x = 0; x < world.size.x; x++) {
+		//for (int i = 0; i < Planes.size(); i++) {
+			for (int y = 0; y < Planes[0].size.y; y++) {
+				for (int x = 0; x < Planes[0].size.x; x++) {
 
-				olc::vi2d vCells = { x, y }; 
+					olc::vi2d vCells = { x, y };
 
-				// Each cell consists of 6 quads which are the faces of a cube. 
-				// vQuads will contain any quads which make up that particular cube at location {x, y} in world space
-				// 1. We begin with the x,y of world space. ->
-				GetWorldQuads(vCells, fCameraAngle, fCameraPitch, fCameraZoom + WORLD_SCALE, vSpace, vQuads);
+					// Each cell consists of 6 quads which are the faces of a cube. 
+					// vQuads will contain any quads which make up that particular cube at location {x, y} in world space
+					// 1. We begin with the x,y of world space. ->
+					GetWorldQuads(vCells, fCameraAngle, fCameraPitch, (fCameraZoom + WORLD_SCALE), vSpace, vQuads, x);
 
+				}
 			}
+		//}
 
 		/*
 			3) Sort in order of depth, from farthest away to closest
@@ -539,32 +586,29 @@ public:
 
 		// Iterate through the vector of quads that we want to draw
 		// Remember that an sQuad is just a face on a cube, composed of 4 3d points in world-space
-		int t = 1;
+
 		for (auto& q : vQuads) {
 
 			// PGE function. Takes screen-space quad coordinates and texture coordinates, and draws them appropriately
-			//DrawPartialWarpedDecal
-			//(
-			//	rendAllWalls.decal,
-			//	{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
-			//	q.tile,
-			//	vTileSize
-			//);
+			DrawPartialWarpedDecal
+			(
+				rendAllWalls.decal,
+				{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
+				q.tile,
+				vTileSize
+			);
 			
-		
-			if (q.points[0].x <= 120) {
+			//if (q.points[0].x <= 120) {
 
-				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::DARK_CYAN);
-				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::DARK_CYAN);
+			//	DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::DARK_CYAN);
+			//	DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::DARK_CYAN);
 
-			}
+			//}
 
-			else {
-				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::CYAN);
-				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::CYAN);
-			}
-
-			t++;
+			//else {
+			//	DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::CYAN);
+			//	DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::CYAN);
+			//}
 
 		}
 
@@ -592,43 +636,45 @@ public:
 		}
 		vQuads.clear();
 
-		DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,16 + 20 }, "P-2: " + std::to_string(vQuads[1].points[2].x) + ", " + std::to_string(vQuads[1].points[2].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,24 + 20 }, "P-3: " + std::to_string(vQuads[1].points[3].x) + ", " + std::to_string(vQuads[1].points[3].y), olc::CYAN, { 0.5f, 0.5f });
-											  
-		DrawStringDecal({ 500,32 + 20 }, "V-0: " + std::to_string(vQuads[0].points[0].x) + ", " + std::to_string(vQuads[0].points[0].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,40 + 20 }, "V-1: " + std::to_string(vQuads[0].points[1].x) + ", " + std::to_string(vQuads[0].points[1].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,48 + 20 }, "V-2: " + std::to_string(vQuads[0].points[2].x) + ", " + std::to_string(vQuads[0].points[2].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,56 + 20 }, "V-3: " + std::to_string(vQuads[0].points[3].x) + ", " + std::to_string(vQuads[0].points[3].y), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,64 + 20 }, "Gravity: " + std::to_string(gravity), olc::RED, { 0.5f, 0.5f });
-		DrawStringDecal({ 500,72 + 20 }, "Delta-Y: " + std::to_string(pDeltaY), olc::WHITE, { 0.5f, 0.5f });
+		
+		DrawLine(cLoc(0,vSpace.x,vSpace.y).x, cLoc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, cLoc(WORLD_WIDTH, vSpace.x, vSpace.y).x, cLoc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, olc::GREEN);
+		//
+		//DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,16 + 20 }, "P-2: " + std::to_string(vQuads[1].points[2].x) + ", " + std::to_string(vQuads[1].points[2].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,24 + 20 }, "P-3: " + std::to_string(vQuads[1].points[3].x) + ", " + std::to_string(vQuads[1].points[3].y), olc::CYAN, { 0.5f, 0.5f });
+		//									  
+		//DrawStringDecal({ 500,32 + 20 }, "V-0: " + std::to_string(vQuads[0].points[0].x) + ", " + std::to_string(vQuads[0].points[0].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,40 + 20 }, "V-1: " + std::to_string(vQuads[0].points[1].x) + ", " + std::to_string(vQuads[0].points[1].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,48 + 20 }, "V-2: " + std::to_string(vQuads[0].points[2].x) + ", " + std::to_string(vQuads[0].points[2].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,56 + 20 }, "V-3: " + std::to_string(vQuads[0].points[3].x) + ", " + std::to_string(vQuads[0].points[3].y), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,64 + 20 }, "Gravity: " + std::to_string(gravity), olc::RED, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,72 + 20 }, "Delta-Y: " + std::to_string(pDeltaY), olc::WHITE, { 0.5f, 0.5f });
 
 		/*
 			7) Draw some debug info
 		*/
-		DrawStringDecal({ 10,0 }, "Player Cursor: " + std::to_string(player.vCursor.x) + ", " + std::to_string(player.vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,16 }, "Time: " + std::to_string(fElapsedTime * 1000));
-		DrawStringDecal({ 10,48 }, "vSpace.x: " + std::to_string(vSpace.x), olc::CYAN, { 0.5f, 0.5f });
-
-		DrawStringDecal({ 10,72 }, "Zoom: " + std::to_string(fCameraZoom), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,350 }, "Ticks: " + std::to_string(ticks), olc::WHITE, { 0.7f, 0.7f });
-
-		DrawStringDecal({ 10,374 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::WHITE, { 0.7f, 0.7f });
-		DrawStringDecal({ 10,386 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::WHITE, { 0.7f, 0.7f });
-
-		DrawStringDecal({ 500,374 }, "wShift: " + std::to_string(WORLD_SHIFT), olc::WHITE, { 0.7f, 0.7f });
+		//DrawStringDecal({ 10,0 }, "Player Cursor: " + std::to_string(player.vCursor.x) + ", " + std::to_string(player.vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
+		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f });
+		DrawStringDecal({ 10,50 }, "vSpace.x: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.5f, 0.5f });
+		//
+		//DrawStringDecal({ 10,64 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 10,72 }, "Epoch-Modulus: " + std::to_string(EPOCH_MOD), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 10,10 }, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 10,18 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
+		//
+		//
+		DrawStringDecal({ 10,28 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::RED, { 0.7f, 0.7f });
+		DrawStringDecal({ 10,40 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::RED, { 0.7f, 0.7f });
 		
-		DrawStringDecal({ 500,386 }, "pScale: " + std::to_string(PLAYER_SCALE), olc::WHITE, { 0.7f, 0.7f });
-		DrawStringDecal({ 500,398 }, "wScale: " + std::to_string(WORLD_SCALE), olc::WHITE, { 0.7f, 0.7f });
-
-		// DrawLine((0 * fCameraZoom - vSpace.x) + ScreenWidth() * PLAYER_OFFSET_X, (0 * fCameraZoom - vSpace.y) + ScreenWidth() * PLAYER_OFFSET_Y, (WORLD_WIDTH * fCameraZoom - vSpace.x) + ScreenWidth() * PLAYER_OFFSET_X, (WORLD_HEIGHT * fCameraZoom - vSpace.y) + ScreenWidth() * PLAYER_OFFSET_Y, olc::RED);
-
+		DrawStringDecal({ 500,10 }, "wShift: " + std::to_string(WORLD_SHIFT), olc::RED, { 0.7f, 0.7f });
+		DrawStringDecal({ 500,18 }, "pScale: " + std::to_string(PLAYER_SCALE), olc::RED, { 0.7f, 0.7f });
+		DrawStringDecal({ 500,26 }, "wScale: " + std::to_string(WORLD_SCALE), olc::RED, { 0.7f, 0.7f });
 
 		// Graceful exit if user is in full screen mode
 		return !GetKey(olc::Key::ESCAPE).bPressed;
 	}
+
 };
 
 int main()

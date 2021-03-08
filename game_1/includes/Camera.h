@@ -12,7 +12,7 @@ const float CAMERA_ZOOM = 12.0f;
 
 void resetCamera() {
 	std::cout << "Resetting Camera" << std::endl;
-	olc::vf2d vCameraPos = { 800.0f, 0.0f };
+	olc::vf2d vCameraPos = { 0.0f, 0.0f };
 	fCameraAngle = CAMERA_ANGLE;					// Allows rotation of the world
 	fCameraAngleTarget = fCameraAngle;
 	fCameraPitch = CAMERA_PITCH;					// Rotation in X axis
