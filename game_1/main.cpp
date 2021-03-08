@@ -294,18 +294,18 @@ public:
 		*/
 
 		// Tells us which faces face us or are facing away
-		auto CheckNormal = [&](int v1, int v2, int v3)
-		{
-			olc::vf2d a = { cube[v1].x, cube[v1].y };
-			olc::vf2d b = { cube[v2].x, cube[v2].y };
-			olc::vf2d c = { cube[v3].x, cube[v3].y };
-			return  (b - a).cross(c - a) > 0;
-		};
+		//auto CheckNormal = [&](int v1, int v2, int v3)
+		//{
+		//	olc::vf2d a = { cube[v1].x, cube[v1].y };
+		//	olc::vf2d b = { cube[v2].x, cube[v2].y };
+		//	olc::vf2d c = { cube[v3].x, cube[v3].y };
+		//	return  (b - a).cross(c - a) > 0;
+		//};
 
-		// bVisible[Face::Floor] = CheckNormal(4, 0, 1);
-		bVisible[Face::Floor] = true;
+		// The perspective is locked here. Use CheckNormal to free it up
+		bVisible[Face::Floor] = true;	// CheckNormal(4, 0, 1);
+		bVisible[Face::North] = true;   // CheckNormal(6, 5, 4);
 		bVisible[Face::South] = false;  // CheckNormal(3, 0, 1);
-		bVisible[Face::North] = true;  // CheckNormal(6, 5, 4);
 		bVisible[Face::East]  = false;	// CheckNormal(7, 4, 0);
 		bVisible[Face::West]  = false;	// CheckNormal(2, 1, 5);
 		bVisible[Face::Top]   = false;	// CheckNormal(7, 3, 2);
@@ -342,10 +342,10 @@ public:
 
 		// 5. Determine which faces are visible, and subesequently their vertices. e.g. (3,0,1,2 is the South face's vertices)
 
-		// As of right now this is always true
+		// As of right now these always true
 		if (bVisible[Face::Floor] && !player) MakeFace(4, 0, 1, 5, Face::Floor);
-
 		if (bVisible[Face::North] && player) MakeFace(6, 5, 4, 7, Face::North);
+
 		// As of right now these are always false
 		if (bVisible[Face::South]) MakeFace(3, 0, 1, 2, Face::South);
 		if (bVisible[Face::East]) MakeFace(7, 4, 0, 3, Face::East);
@@ -437,7 +437,7 @@ public:
 		if (player.vCursor.y >= world.size.y) player.vCursor.y = world.size.y - 1;
 
 
-		// Apply gravity to the situation, or thrust!
+		// Apply gravity to the situation, or thrust
 		if (GetKey(olc::Key::SPACE).bHeld)
 		{
 			if (pDeltaY > -133)
@@ -449,7 +449,7 @@ public:
 		// Rendering
 		
 		// Alter VSpace
-		//vSpace.x += VSPEED_X * fElapsedTime;
+		vSpace.x += VSPEED_X * fElapsedTime;
 
 		//vSpace.y += 1.0 * fElapsedTime;
 		//vSpace.z += 1.0 * fElapsedTime;
@@ -504,13 +504,13 @@ public:
 		for (auto& q : vQuads) {
 
 			// PGE function. Takes screen-space quad coordinates and texture coordinates, and draws them appropriately
-			DrawPartialWarpedDecal
-			(
-				rendAllWalls.decal,
-				{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
-				q.tile,
-				vTileSize
-			);
+			//DrawPartialWarpedDecal
+			//(
+			//	rendAllWalls.decal,
+			//	{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
+			//	q.tile,
+			//	vTileSize
+			//);
 
 			DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y);
 			DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y);
