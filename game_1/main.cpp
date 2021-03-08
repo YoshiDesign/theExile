@@ -76,16 +76,15 @@
 
 class olcDungeon : public olc::PixelGameEngine
 {
-	static const int WORLD_HEIGHT = SCREEN_HEIGHT / 8;
-	static const int WORLD_WIDTH = SCREEN_WIDTH / 8;
+	const int WORLD_HEIGHT = SCREEN_HEIGHT / 8;
+	const int WORLD_WIDTH = SCREEN_WIDTH / 8;
 
-	const int VSPEED_X = 100;
+	const int VSPEED_X = 25;
 
 	// Player's offset from the cursor
 	float pDeltaY = -100.0f;
-	float gravity = 5.0f;
-	float thrust = 8.0f;
-
+	float gravity = 9.0f;
+	float thrust = 16.0f;
 
 public:
 	olcDungeon()
@@ -469,7 +468,6 @@ public:
 
 		// A container filled with the things we're going to draw
 		std::vector<sQuad> vQuads;
-		std::vector<sQuad> worldQuads;
 
 		// Non optimized. We're iterating over the whole world and redrawing it all the time.
 		for (int y = 0; y < world.size.y; y++)
@@ -512,24 +510,32 @@ public:
 			//	vTileSize
 			//);
 
-			DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y);
-			DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y);
+			if (q.points[0].x <= 120) {
+				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::DARK_GREEN);
+				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::DARK_GREEN);
+			}
+
+			else {
+				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::GREEN);
+				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::GREEN);
+			}
 
 		}
 
 		/*
 			5) Draw current tile selection in corner
 		*/
-		DrawPartialDecal({ 10,10 }, rendAllWalls.decal, player.vTileCursor * vTileSize, vTileSize);
-
+		//DrawPartialDecal({ 10,10 }, rendAllWalls.decal, player.vTileCursor * vTileSize, vTileSize);
+		vQuads.clear();
 		/*
 			6) Draw Player	
 		*/ 
-		vQuads.clear();
+
 		GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
 		for (auto& q : vQuads) {
 			DrawWarpedDecal(rendSelect.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
 		}
+		vQuads.clear();
 
 		DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
 		DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
@@ -554,7 +560,6 @@ public:
 		DrawStringDecal({ 0,64 }, "vSpace.z: " + std::to_string(vSpace.z), olc::CYAN, { 0.5f, 0.5f });
 		DrawStringDecal({ 0,72 }, "Zoom: " + std::to_string(fCameraZoom), olc::CYAN, { 0.5f, 0.5f });
 
-		worldQuads.clear();
 
 		// Graceful exit if user is in full screen mode
 		return !GetKey(olc::Key::ESCAPE).bPressed;
