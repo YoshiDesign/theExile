@@ -56,6 +56,7 @@
 */
 
 #define OLC_PGE_APPLICATION
+#include <algorithm>
 #include "includes/olcPixelGameEngine.h"
 #include "includes/Player.h"
 #include "includes/Helpers.h"
@@ -66,7 +67,7 @@
 #define SPRITE_LEN_X 64
 #define SPRITE_LEN_Y 64
 
-/*
+/*									   
 
 	NOTE! This program requires a tile spritesheet NOT
 	provided in this github. You only need a few tiles,
@@ -76,8 +77,8 @@
 
 class olcDungeon : public olc::PixelGameEngine
 {
-	const int WORLD_HEIGHT = SCREEN_HEIGHT / 8;
-	const int WORLD_WIDTH = SCREEN_WIDTH / 8;
+	static const int WORLD_HEIGHT = (int)(SCREEN_HEIGHT / 8);
+	static const int WORLD_WIDTH = (int)(SCREEN_WIDTH / 8);
 	const int MAP_LEFT_EDGE = 0;
 	const int MAP_TOP_EDGE = -133;
 	int WORLD_SCALE = 120;
@@ -109,27 +110,21 @@ public:
 	}
 
 	/*
-		Round
-		fundamentally a 2D array of sCells
+		Plane's rely on this class to access their cells.
+		World has its own allCells<sCell> vector to access on its own and should prefer that method
 	*/
-	class World
+	class GPS
 	{
+	private:
+		olc::vi2d size;
+		sCell NullCell;
+		std::vector<sCell> vCells;
+
 	public:
-		World()
-		{
+		GPS() {};
+		~GPS() {};
 
-		}
-
-		// Initializes the size std::vector and resizes
-		void Create(int w, int h)
-		{
-			size = { w, h };
-
-			// vCells is now a vector of sCells
-			vCells.resize(w * h);
-		}
-
-		// Address a coordinate which exists in the world
+		// Address a coordinate which exists on a Plane
 		sCell& GetCell(const olc::vi2d& v)
 		{
 			if (v.x >= 0 && v.x < size.x && v.y >= 0 && v.y < size.y)
@@ -139,37 +134,165 @@ public:
 				return NullCell;
 		}
 
-		void update()
+		// Address a coordinate which exists in the World
+		sCell& GetWorldCell(const olc::vi2d& v, std::vector<sCell>& allCells)
 		{
-		
-			
-		
+			if (v.x >= 0 && v.x < size.x && v.y >= 0 && v.y < size.y)
+				// Extraction of a sCell from vCells
+				return allCells[v.y * size.x + v.x];
+			else
+				return NullCell;
 		}
 
+		void Resize(int size)
+		{
+			vCells.resize(size);
+		}
+
+		// Don't use this with World class unless you're calling it from a Plane instance
+		const std::vector<sCell>& VC()
+		{
+			return vCells;
+		}
+
+	};
+
+	class Plane
+	{
+	private:
+		GPS gps;
+	public:
+		Plane() {};
+		Plane(int w, int h, int i) : index{ i }, size{ w, h }{
+			
+			UpdatePlane();
+			gps.Resize(w * h);
+		
+		};
+
+		// Address a coordinate which exists in the world
+		sCell& GetCell(const olc::vi2d& v)
+		{
+			return gps.GetCell(v);
+		}
+
+		// Get the max x,y coordinate
+		olc::vi2d dimMax()
+		{
+			return { size.x, size.y };
+		}
+
+		const std::vector<sCell>& VC()
+		{
+			return gps.VC();
+		}
+
+		void UpdatePlane()
+		{
+
+			for (int y = 0; y < size.y; y++)
+				for (int x = 0; x < size.x; x++)
+				{
+					// Nothing is a wall from the start
+					GetCell({ x, y }).wall = false;
+
+					// Assign each face a tile from the spritesheet
+					GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
+					GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 0 } *vTileSize;
+					GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } *vTileSize;
+					GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } *vTileSize;
+					GetCell({ x, y }).id[Face::West] = olc::vi2d{ 0, 0 } *vTileSize;
+					GetCell({ x, y }).id[Face::East] = olc::vi2d{ 0, 0 } *vTileSize;
+
+				}
+
+		}
+
+		~Plane() {};
+
+	public:
+
+		olc::vi2d size;
+
+		// Dimensions of each tile in spritesheet
+		olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
+
+		int index;
+
+	};
+
+	/*
+		Round
+		Contains 2 Planes that compose the world
+	*/
+	class World
+	{
 	public:
 		olc::vi2d size;
-		int distance;
+		std::vector<Plane&> planes;
+
+		int width;
+		int height;
+
+		Plane plane_1;
+		Plane plane_2;
+
+	public:
+		World(){
+
+			width  = (int)(SCREEN_WIDTH  / 8);
+			height = (int)(SCREEN_HEIGHT / 8);
+			size = { width * 2, height * 2 };
+			
+		}
+		 
+		void Create()
+		{
+			// Setup Planes
+			plane_1 = Plane(width, height, 1);
+			plane_2 = Plane(width, height, 2);
+
+			// Contains the cells of 2 planes
+			allCells.resize(2 * (width  * height));
+
+			planes.push_back(plane_1);
+			planes.push_back(plane_2);
+
+			// Update vCells with contents of entire world
+			merge(plane_1.VC.begin(), plane_1.VC.end(), plane_2.VC.begin(), plane_2.VC.end(), allCells.begin());
+		}
+
+		olc::vi2d dimMax()
+		{
+			return { 2 * width, 2 * height };
+		}
+
+		// Get a cell from the world
+		sCell& GetCell(const olc::vi2d& v)
+		{
+			return gps.GetWorldCell(v, allCells);
+		}
+
+		void UpdateWorld()
+		{
+			// When plane 1 has passed, delete plane 1. Plane 2 becomes plane 1.
+			// Create new plane. Make it Plane 2
+			// Merge it onto allCells
+		}
 
 	private:
-		// The cells of the world
-		std::vector<sCell> vCells;
+		GPS gps;
+		std::vector<sCell> allCells;
 
-		// Returned by functions in the event we try to access cells outside of the world
-		sCell NullCell;
-
-	};//EndofWorld
+	};
 
 	Player player;
 	World world;
 	Renderable rendSelect;
 	Renderable rendAllWalls;
-	std::vector<World> Planes;
 
 	vec3d vSpace;	// Initialized using the camera's initial vector. Used to move the world in relation to the camera
 	bool bVisible[6];
-
-	// Dimensions of each tile in spritesheet
-	olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
 
 	enum Face
 	{
@@ -195,40 +318,8 @@ public:
 		rendSelect.Load("./gfx/holyship.png");
 		rendAllWalls.Load("./gfx/grounds.png");
 
-		NewWorld(Planes);
+		world.Create();
 		return true;
-	}
-
-
-	void NewWorld(std::vector<World>& planeVector)
-	{
-
-		do {
-
-			world.Create((int)WORLD_WIDTH, (int)WORLD_HEIGHT);
-
-			// World initialization
-			for (int y = 0; y < world.size.y; y++)
-				for (int x = 0; x < world.size.x; x++)
-				{
-					// Nothing is a wall from the start
-					world.GetCell({ x, y }).wall = false;
-
-					// Assign each face a tile from the spritesheet
-					world.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
-					world.GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 0 } *vTileSize;
-					world.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } *vTileSize;
-					world.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } *vTileSize;
-					world.GetCell({ x, y }).id[Face::West] = olc::vi2d{ 0, 0 } *vTileSize;
-					world.GetCell({ x, y }).id[Face::East] = olc::vi2d{ 0, 0 } *vTileSize;
-
-				}
-
-			planeVector.push_back(world);
-
-		} while (planeVector.size() != 2);
-
-		
 	}
 
 	std::array<vec3d, 8> CreateCube(const olc::vi2d& vCell, const float fAngle,
@@ -352,7 +443,7 @@ public:
 	*/
 	void GetWorldQuads(
 		olc::vi2d& vCell, const float fAngle, const float fPitch, 
-		const float fScale, vec3d& vSpace, std::vector<sQuad> &render, int row
+		const float fScale, vec3d& vSpace, std::vector<sQuad> &render
 	)
 	{
 		// 2. vCell is the {x,y} in world space of our cell. In order to know
@@ -400,19 +491,44 @@ public:
 	}
 
 
+
+	/*	///	///	///	///	///	///  /
+	|            <>				 |
+	|			  <>		     |
+	|	 <Useful calculations>	 |
+	|	         <>				 |
+	|			  <>			 |
+	/	///	///	///	///	///	/// */
+
+	/*
+		@function vCalc - Get the (x,y) of any world's cell in screen-space.
+		@param index - The cell in the World's vector of cells (World->vSpace)
+		@param spaceX - The distance the camera has moved from its starting location X
+		@param spaceY - The distance the camera has moved from its starting location Y
+	*/
 	olc::vi2d vCalc(int index, float spaceX, float spaceY) {
 
 		return {
 			(int)((index * (fCameraZoom + WORLD_SCALE) - spaceX) + ScreenWidth() * PLAYER_OFFSET_X),
-			(int)(-spaceY + (ScreenHeight() * PLAYER_OFFSET_Y) )
+			(int)(-spaceY + (ScreenHeight() * PLAYER_OFFSET_Y))
 		};
 	}
 
+	/*
+		@function GetWorldLength
+		The length of this world in pixels. Reaches to the farthest edge of the last column's top cell
+	*/ 
+	float GetWorldLength(vec3d vSpace)
+	{
+		return vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x;
+	}
+	
+	// <END> Useful calculations
 
 	/*
-	@function GetPLayerQuads
-	The player comes with its position tracker
-*/
+		@function GetPLayerQuads
+		The player comes with its position tracker
+	*/
 	void GetPlayerQuads(const olc::vi2d& vCell, const float fAngle, const float fPitch,
 		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, float fElapsedTime,
 		bool gravEnabled = false, bool isPlayer = false)
@@ -444,10 +560,6 @@ public:
 				}
 				MakeEntity(6, 5, 4, 7, Face::North, cube);
 		}
-		
-
-		// Set the player face
-		
 
 	}
 
@@ -518,8 +630,7 @@ public:
 			if (altitude < 0) {
 				altitude += (gravity * fElapsedTime);
 			}
-
-			
+			// TODO - Thrust Bugs
 			DT < 1 && DT > -0.4f ? DT = DT : DT < -0.4f ? DT = -0.4f : DT > 1 ? DT = 0.4f : DT = DT;
 			DY < 1 && DY > -1 ? DY = DY : DY < -1 ? DY = -1 : DY > 1 ? DY = 1 : DY = DY;
 			DX < 1 && DX > -1 ? DX = DX : DX < -1 ? DX = -1 : DX > 1 ? DX = 1 : DX = DX;
@@ -569,48 +680,41 @@ public:
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
 
-
+		// Check key pressess
 		FlightControl(fElapsedTime, 2);
 
-		if (player.vCursor.x < 0) player.vCursor.x = 0;
+		/*if (player.vCursor.x < 0) player.vCursor.x = 0;
 		if (player.vCursor.y < 0 - WIGGLE_ROOM_TOP) player.vCursor.y = 0;
 		if (player.vCursor.x >= world.size.x) player.vCursor.x = world.size.x - 1;
-		if (player.vCursor.y >= world.size.y + WIGGLE_ROOM_BOTTOM) player.vCursor.y = world.size.y - 1 + WIGGLE_ROOM_BOTTOM;
+		if (player.vCursor.y >= world.size.y + WIGGLE_ROOM_BOTTOM) player.vCursor.y = world.size.y - 1 + WIGGLE_ROOM_BOTTOM;*/
 
-
-		// Apply gravity to the situation, or thrust
-		
 
 		// Alter VSpace - This moves the map
 		vSpace.x += (int)VSPEED_X * fElapsedTime;
 
 		// Count the worlds that have passed by
-		if (vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x < 0)
+		if (vCalc(world.width, vSpace.x, vSpace.y).x < 0)
 		{
 			EPOCH++;
-			Planes.erase(Planes.begin());
+			world.erase();
 			vSpace.x = 0;
-			NewWorld(Planes);
+
 		}
 
 		/*
-			1) Create dummy cube to extract visible face information
+			Create dummy cube to extract visible face information
 		*/
 
 		// Cull faces that cannot be seen
 		std::array<vec3d, 8> cullCube = CreateCube({ 0, 0 }, fCameraAngle, fCameraPitch, fCameraZoom, vSpace);
+
 		// Sets the booleans determining which faces we can see
 		CalculateVisibleFaces(cullCube);
-
-		/*
-			2) Get all visible sides of all visible "tile cubes"
-		*/
 
 		// A container filled with the things we're going to draw
 		std::vector<sQuad> vQuads;
 
 		// Non optimized. We're iterating over the whole world and redrawing it all the time.
-		//for (int i = 0; i < Planes.size(); i++) {
 		for (int y = 0; y < Planes[0].size.y; y++) {
 			for (int x = 0; x < Planes[0].size.x; x++) {
 
@@ -619,14 +723,13 @@ public:
 				// Each cell consists of 6 quads which are the faces of a cube. 
 				// vQuads will contain any quads which make up that particular cube at location {x, y} in world space
 				// 1. We begin with the x,y of world space. ->
-				GetWorldQuads(vCells, fCameraAngle, fCameraPitch, (fCameraZoom + WORLD_SCALE), vSpace, vQuads, x);
+				GetWorldQuads(vCells, fCameraAngle, fCameraPitch, (fCameraZoom + WORLD_SCALE), vSpace, vQuads);
 
 			}
 		}
-		//}
 
 		/*
-			3) Sort in order of depth, from farthest away to closest
+			Sort in order of depth, from farthest away to closest
 		*/
 		std::sort(vQuads.begin(), vQuads.end(), [](const sQuad& q1, const sQuad& q2)
 		{
@@ -636,36 +739,35 @@ public:
 		});
 
 		/*
-			4) Iterate through all "tile cubes" and draw their visible faces
+			Iterate through all "tile cubes" and draw their visible faces
 		*/
 
 		Clear(olc::BLACK);
 
 		// Iterate through the vector of quads that we want to draw
 		// Remember that an sQuad is just a face on a cube, composed of 4 3d points in world-space
-
 		for (auto& q : vQuads) {
 
 			// PGE function. Takes screen-space quad coordinates and texture coordinates, and draws them appropriately
-			DrawPartialWarpedDecal
+			/*DrawPartialWarpedDecal
 			(
 				rendAllWalls.decal,
 				{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
 				q.tile,
 				vTileSize
-			);
+			);*/
 			
-			//if (q.points[0].x <= 120) {
+			if (q.points[0].x <= 120) {
 
-			//	DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::DARK_CYAN);
-			//	DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::DARK_CYAN);
+				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::DARK_CYAN);
+				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::DARK_CYAN);
 
-			//}
+			}
 
-			//else {
-			//	DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::CYAN);
-			//	DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::CYAN);
-			//}
+			else {
+				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::CYAN);
+				DrawLine(q.points[1].x, q.points[1].y, q.points[2].x, q.points[2].y, olc::CYAN);
+			}
 
 		}
 
@@ -694,9 +796,8 @@ public:
 
 		}
 		vQuads.clear();
-
 		
-		DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, olc::GREEN);
+		DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::GREEN);
 		//
 		//DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
@@ -726,7 +827,7 @@ public:
 		//DrawStringDecal({ 10,72 }, "Epoch-Modulus: " + std::to_string(EPOCH_MOD), olc::CYAN, { 0.5f, 0.5f });
 
 		DrawStringDecal({ 10,100 }, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,110 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
+		//DrawStringDecal({ 10,110 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
 
 		DrawStringDecal({ 460,10 }, "(Unassigned) wShift: " + std::to_string(WORLD_SHIFT), olc::GREEN, { 0.7f, 0.7f });
 		DrawStringDecal({ 460,18 }, "(I-)(U+) Player Scale: " + std::to_string(PLAYER_SCALE), olc::GREEN, { 0.7f, 0.7f });
