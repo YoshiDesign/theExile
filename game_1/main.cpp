@@ -520,7 +520,7 @@ public:
 			}
 
 			
-			DT < 1 && DT > -0.3 ? DT = DT : DT < -0.3 ? DT = -0.3 : DT > 1 ? DT = 0.3 : DT = DT;
+			DT < 1 && DT > -0.4f ? DT = DT : DT < -0.4f ? DT = -0.4f : DT > 1 ? DT = 0.4f : DT = DT;
 			DY < 1 && DY > -1 ? DY = DY : DY < -1 ? DY = -1 : DY > 1 ? DY = 1 : DY = DY;
 			DX < 1 && DX > -1 ? DX = DX : DX < -1 ? DX = -1 : DX > 1 ? DX = 1 : DX = DX;
 
@@ -719,6 +719,7 @@ public:
 		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(pDeltaY), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,55 }, "DY: " + std::to_string(DY), olc::CYAN, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,62 }, "DT: " + std::to_string(DT), olc::CYAN, { 0.47f, 0.47f });
 		
 		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f 
 		//DrawStringDecal({ 10,64 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
