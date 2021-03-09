@@ -85,20 +85,22 @@ class olcDungeon : public olc::PixelGameEngine
 	int PLAYER_SCALE = 6;
 	int EPOCH = 0;
 	int EPOCH_MOD = 90;
-	float DX = 20.0f;
-	float DY = 20.0f;
+	float DX = 0.0f;
+	float DY = 0.0f;
+	float DT = 0.0f;
 	float C_DELTA = 0.0;
 	const int VSPEED_X = 415;
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
 
-	// Player's offset from the cursor
-	float altitude = -100.0f;
+	// Player start position
 	float pDeltaY = 0.0f;
-	float pDeltaX = 0.0f;
+	float pDeltaX = -155.0f;
+	float altitude = -100.0f;
+
+	// Effect magnitudes
 	float gravity = 9.0f;
 	float thrust = 36.0f;
-	int ticks = 0;
 
 public:
 	olcDungeon()
@@ -449,6 +451,89 @@ public:
 
 	}
 
+	void FlightControl(float fElapsedTime, int type)
+	{
+		switch (type)
+		{
+
+		// ScrubMode
+		case 1:
+			// Arrow keys to move the selection cursor around map (boundary checked)
+			if (GetKey(olc::Key::LEFT).bHeld)
+			{
+				if (altitude > MAP_TOP_EDGE)
+					altitude -= thrust * fElapsedTime;
+			}
+			else if (GetKey(olc::Key::RIGHT).bHeld) {
+				if (altitude < MAP_TOP_EDGE) {
+					altitude += thrust * fElapsedTime;
+					pDeltaX += 35 * fElapsedTime;
+				}
+			}
+			else if (altitude < 0) {
+				altitude += (gravity * fElapsedTime);
+			}
+
+			// if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
+			if (GetKey(olc::Key::UP).bHeld) {
+				player.vCursor.y -= C_DELTA * fElapsedTime;
+				pDeltaX += 35 * fElapsedTime;
+				pDeltaY -= 35 * fElapsedTime;
+			}
+			// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
+			if (GetKey(olc::Key::DOWN).bHeld) {
+				player.vCursor.y += C_DELTA * fElapsedTime;
+				pDeltaY += 35 * fElapsedTime;
+				pDeltaX -= 35 * fElapsedTime;
+			}
+
+		// ProMode
+		case 2:
+
+			if (GetKey(olc::Key::LEFT).bHeld)
+			{
+				DX -= 1.0f * fElapsedTime;
+			}
+			if (GetKey(olc::Key::RIGHT).bHeld)
+			{
+				DX += 1.0f * fElapsedTime;
+			}
+			if (GetKey(olc::Key::DOWN).bHeld)
+			{
+				DY += 1.0f * fElapsedTime;
+			}
+			if (GetKey(olc::Key::UP).bHeld)
+			{
+				DY -= 1.0f * fElapsedTime;
+			}
+			if (GetKey(olc::Key::CTRL).bHeld)
+			{
+				DT -= 1.0f * fElapsedTime;
+			}
+			if (GetKey(olc::Key::SHIFT ).bHeld)
+			{
+				DT += 1.0f * fElapsedTime;
+			}
+
+			if (altitude < 0) {
+				altitude += (gravity * fElapsedTime);
+			}
+
+			
+			DT < 1 && DT > -0.3 ? DT = DT : DT < -0.3 ? DT = -0.3 : DT > 1 ? DT = 0.3 : DT = DT;
+			DY < 1 && DY > -1 ? DY = DY : DY < -1 ? DY = -1 : DY > 1 ? DY = 1 : DY = DY;
+			DX < 1 && DX > -1 ? DX = DX : DX < -1 ? DX = -1 : DX > 1 ? DX = 1 : DX = DX;
+
+			pDeltaY += DY;
+			pDeltaX += DX;
+			altitude += DT;
+
+		default:
+			break;
+		}
+		
+	}
+
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		float x = ScreenHeight();
@@ -456,74 +541,36 @@ public:
 		olc::vi2d vMouse = { GetMouseX(), GetMouseY() };
 
 		// WS keys to tilt camera
-		if (GetKey(olc::Key::W).bHeld) fCameraPitch += 1.0f * fElapsedTime;
-		if (GetKey(olc::Key::S).bHeld) fCameraPitch -= 1.0f * fElapsedTime;
+		//if (GetKey(olc::Key::W).bHeld) fCameraPitch += 1.0f * fElapsedTime;
+		//if (GetKey(olc::Key::S).bHeld) fCameraPitch -= 1.0f * fElapsedTime;
 
-		// DA Keys to manually rotate camera
-		if (GetKey(olc::Key::D).bHeld) fCameraAngleTarget += 1.0f * fElapsedTime;
-		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
+		//// DA Keys to manually rotate camera
+		//if (GetKey(olc::Key::D).bHeld) fCameraAngleTarget += 1.0f * fElapsedTime;
+		//if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
 
 		// QZ Keys to zoom in or out
-		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
+		//if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
 		// if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
 
-		if (GetKey(olc::Key::R).bPressed)
-			resetCamera();
-		//if (GetKey(olc::Key::P).bHeld) WORLD_SHIFT++;
-		//if (GetKey(olc::Key::O).bHeld) WORLD_SHIFT--;
+		//if (GetKey(olc::Key::R).bPressed)
+			//resetCamera();
+
 		if (GetKey(olc::Key::I).bHeld) PLAYER_SCALE--;
 		if (GetKey(olc::Key::U).bHeld) PLAYER_SCALE++;
 		if (GetKey(olc::Key::L).bHeld) WORLD_SCALE++;
 		if (GetKey(olc::Key::K).bHeld) WORLD_SCALE--;
 		if (GetKey(olc::Key::H).bPressed) C_DELTA += 1.0f;
 		if (GetKey(olc::Key::G).bPressed) C_DELTA -= 1.0f;
-
 		if (GetKey(olc::Key::X).bHeld) DX += 1.0f;
 		if (GetKey(olc::Key::Z).bHeld) DX -= 1.0f;
 		if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
 		if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
-		//if (GetKey(olc::Key::M).bHeld) EPOCH_MOD++;
-		//if (GetKey(olc::Key::N).bHeld) EPOCH_MOD--;
-
-		// Numpad keys used to rotate camera to fixed angles
-		// if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
-		//if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
-		//if (GetKey(olc::Key::I).bPressed) fCameraAngleTarget = 3.14159f * 0.5f;
-		//if (GetKey(olc::Key::U).bPressed) fCameraAngleTarget = 3.14159f * 0.75f;
-		//if (GetKey(olc::Key::Y).bPressed) fCameraAngleTarget = 3.14159f * 1.0f;
-		//if (GetKey(olc::Key::T).bPressed) fCameraAngleTarget = 3.14159f * 1.25f;
-
 
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
 
-		// Arrow keys to move the selection cursor around map (boundary checked)
-		if (GetKey(olc::Key::LEFT).bHeld)
-		{
-			if (altitude > MAP_TOP_EDGE)
-				altitude -= thrust * fElapsedTime;
-		}
-		else if (GetKey(olc::Key::RIGHT).bHeld) {
-			if (altitude < MAP_TOP_EDGE) {
-				altitude += thrust * fElapsedTime;
-				pDeltaX += DX * fElapsedTime;
-			}
-		}
-		else if (altitude < 0)
-			altitude += (gravity * fElapsedTime);
 
-		// if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
-		if (GetKey(olc::Key::UP).bHeld) {
-			player.vCursor.y -= C_DELTA * fElapsedTime;
-			pDeltaX += DX * fElapsedTime;
-			pDeltaY -= DY * fElapsedTime;
-		}
-		// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
-		if (GetKey(olc::Key::DOWN).bHeld) {
-			player.vCursor.y += C_DELTA * fElapsedTime;
-			pDeltaY += DY * fElapsedTime;
-			pDeltaX -= DX * fElapsedTime;
-		}
+		FlightControl(fElapsedTime, 2);
 
 		if (player.vCursor.x < 0) player.vCursor.x = 0;
 		if (player.vCursor.y < 0 - WIGGLE_ROOM_TOP) player.vCursor.y = 0;
@@ -670,7 +717,7 @@ public:
 		DrawStringDecal({ 10 ,19 }, "Altitude: " + std::to_string(altitude), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,27 }, "Delta-X: " + std::to_string(pDeltaX), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(pDeltaY), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,43 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,55 }, "DY: " + std::to_string(DY), olc::CYAN, { 0.47f, 0.47f });
 		
 		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f 
