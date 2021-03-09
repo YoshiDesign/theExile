@@ -85,12 +85,17 @@ class olcDungeon : public olc::PixelGameEngine
 	int PLAYER_SCALE = 6;
 	int EPOCH = 0;
 	int EPOCH_MOD = 90;
+	float DX = 20.0f;
+	float DY = 20.0f;
+	float C_DELTA = 0.0;
 	const int VSPEED_X = 415;
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
 
 	// Player's offset from the cursor
-	float pDeltaY = -100.0f;
+	float altitude = -100.0f;
+	float pDeltaY = 0.0f;
+	float pDeltaX = 0.0f;
 	float gravity = 9.0f;
 	float thrust = 36.0f;
 	int ticks = 0;
@@ -178,20 +183,17 @@ public:
 	bool OnUserCreate() override
 	{
 		// The initial position of the World
-		vSpace = { vCameraPos.x, 0.0f, vCameraPos.y };
-		std::cout << "Camera: (" << vCameraPos.x << ", " << vCameraPos.y << ")" << std::endl;
-
+		
+		resetCamera();
 		// The initial position of the camera in the world		
-		vCameraPos = { player.vCursor.x + 0.5f, player.vCursor.y + 0.5f };
+		vCameraPos = cameraPos;
 		vCameraPos *= fCameraZoom;
+		vSpace = { vCameraPos.x, 0.0f, vCameraPos.y };
 
 		rendSelect.Load("./gfx/holyship.png");
 		rendAllWalls.Load("./gfx/grounds.png");
 
 		NewWorld(Planes);
-
-		resetCamera();
-
 		return true;
 	}
 
@@ -227,7 +229,6 @@ public:
 		
 	}
 
-
 	std::array<vec3d, 8> CreateCube(const olc::vi2d& vCell, const float fAngle,
 		const float fPitch, const float fScale, const vec3d& vSpace)
 	{
@@ -256,7 +257,7 @@ public:
 		}
 
 		// We could return the unitCube here, and it would be properly allocated to screen
-		// space, albeit in 2 dimension with no orthog
+		// space, albeit in 2 dimensional space, and with no orthog
 
 		// Rotate Cube in Y-Axis around origin
 		float s = sin(fAngle);
@@ -357,9 +358,9 @@ public:
 		//    the first transformation of CreateCube() ->
 
 		// Don't render things that exit the map area, render them on the other side of the plane
-		//if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE) {
-		//	return;
-		//}
+		if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE) {
+			return;
+		}
 
 		//if (row = WORLD_WIDTH - 1)
 		//	if (vCell.x * fScale - vSpace.x < MAP_LEFT_EDGE) {
@@ -397,7 +398,7 @@ public:
 	}
 
 
-	olc::vi2d cLoc(int index, float spaceX, float spaceY) {
+	olc::vi2d vCalc(int index, float spaceX, float spaceY) {
 
 		return {
 			(int)((index * (fCameraZoom + WORLD_SCALE) - spaceX) + ScreenWidth() * PLAYER_OFFSET_X),
@@ -411,33 +412,40 @@ public:
 	The player comes with its position tracker
 */
 	void GetPlayerQuads(const olc::vi2d& vCell, const float fAngle, const float fPitch,
-		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, float fElapsedTime)
+		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, float fElapsedTime,
+		bool gravEnabled = false, bool isPlayer = false)
 	{
-		std::array<vec3d, 8> cursCube = CreateCube(vCell, fAngle, fPitch, fScale + PLAYER_SCALE, vSpace);
-		std::array<vec3d, 8> playCube = CreateCube(vCell, fAngle, fPitch, fScale + PLAYER_SCALE, vSpace);
-
-		// Offset the player from the cursor
-		for (auto &pc : playCube)
-		{
-			// The players separation from its ground marker
-			pc.y += pDeltaY;
-		}
+		std::array<vec3d, 8> cube = CreateCube(vCell, fAngle, fPitch, fScale + PLAYER_SCALE, vSpace);
 
 		// Get the cell that the cursor sits on
 		auto& cell = world.GetCell(vCell);
 
 		// Defines the faces of the cube. Each int is an ID of which vertex we want to acknowledge. Face comes from enum.
 		// The projCube pushed onto our render vector will now contain those vertices in screen-space
-		auto MakeEntity = [&](int v1, int v2, int v3, int v4, Face f, std::array<vec3d, 8> cube, bool gravEnabled, bool isPlayer)
+		auto MakeEntity = [&](int v1, int v2, int v3, int v4, Face f, std::array<vec3d, 8> cube)
 		{
-			// id[f] is one of the 6 faces, determined at the end of this function (these, 4, vertices, are, thisFaceQuad)
+			// This is pushing an sQuad. id[f] is one of the 6 faces, determined at the end of this function (these, 4, vertices, are, thisFaceQuad)
 			render.push_back({ cube[v1], cube[v2], cube[v3], cube[v4], cell.id[f], gravEnabled, isPlayer });
 		};
 
-		/*if (bVisible[Face::Floor] && !player)*/ 
-		MakeEntity(4, 0, 1, 5, Face::Floor, cursCube, false, false);
-		/*if (bVisible[Face::North] && player)*/ 
-		MakeEntity(6, 5, 4, 7, Face::North, playCube, true, true);
+		switch (isPlayer)
+		{
+			case false : 
+				// The cursor
+				MakeEntity(4, 0, 1, 5, Face::Floor, cube);
+			case true: 
+				// The player. Offset the player from the cursor
+				for (auto &pc : cube)
+				{
+					pc.y += altitude + pDeltaY;
+					pc.x += pDeltaX;
+				}
+				MakeEntity(6, 5, 4, 7, Face::North, cube);
+		}
+		
+
+		// Set the player face
+		
 
 	}
 
@@ -457,18 +465,26 @@ public:
 
 		// QZ Keys to zoom in or out
 		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
-		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
+		// if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
 
 		if (GetKey(olc::Key::R).bPressed)
 			resetCamera();
-		if (GetKey(olc::Key::P).bHeld) WORLD_SHIFT++;
-		if (GetKey(olc::Key::O).bHeld) WORLD_SHIFT--;
+		//if (GetKey(olc::Key::P).bHeld) WORLD_SHIFT++;
+		//if (GetKey(olc::Key::O).bHeld) WORLD_SHIFT--;
 		if (GetKey(olc::Key::I).bHeld) PLAYER_SCALE--;
 		if (GetKey(olc::Key::U).bHeld) PLAYER_SCALE++;
 		if (GetKey(olc::Key::L).bHeld) WORLD_SCALE++;
 		if (GetKey(olc::Key::K).bHeld) WORLD_SCALE--;
-		if (GetKey(olc::Key::M).bHeld) EPOCH_MOD++;
-		if (GetKey(olc::Key::N).bHeld) EPOCH_MOD--;
+		if (GetKey(olc::Key::H).bPressed) C_DELTA += 1.0f;
+		if (GetKey(olc::Key::G).bPressed) C_DELTA -= 1.0f;
+
+		if (GetKey(olc::Key::X).bHeld) DX += 1.0f;
+		if (GetKey(olc::Key::Z).bHeld) DX -= 1.0f;
+		if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
+		if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
+		//if (GetKey(olc::Key::M).bHeld) EPOCH_MOD++;
+		//if (GetKey(olc::Key::N).bHeld) EPOCH_MOD--;
+
 		// Numpad keys used to rotate camera to fixed angles
 		// if (GetKey(olc::Key::P).bPressed) fCameraAngleTarget = 3.14159f * 0.0f;
 		//if (GetKey(olc::Key::O).bPressed) fCameraAngleTarget = 3.14159f * 0.25f;
@@ -476,21 +492,38 @@ public:
 		//if (GetKey(olc::Key::U).bPressed) fCameraAngleTarget = 3.14159f * 0.75f;
 		//if (GetKey(olc::Key::Y).bPressed) fCameraAngleTarget = 3.14159f * 1.0f;
 		//if (GetKey(olc::Key::T).bPressed) fCameraAngleTarget = 3.14159f * 1.25f;
-		//if (GetKey(olc::Key::L).bPressed) fCameraAngleTarget = 3.14159f * 1.75f;
+
 
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
 
 		// Arrow keys to move the selection cursor around map (boundary checked)
-		// if (GetKey(olc::Key::LEFT).bPressed) vCursor.x--;
-		if (GetKey(olc::Key::LEFT).bHeld) player.vCursor.x -= 15.0f * fElapsedTime;
-		// if (GetKey(olc::Key::RIGHT).bPressed) vCursor.x++;
-		if (GetKey(olc::Key::RIGHT).bHeld) player.vCursor.x += 15.0f * fElapsedTime;
-		// if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
-		if (GetKey(olc::Key::UP).bHeld) player.vCursor.y -= 15.0f * fElapsedTime;
-		// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
-		if (GetKey(olc::Key::DOWN).bHeld) player.vCursor.y += 15.0f * fElapsedTime;
+		if (GetKey(olc::Key::LEFT).bHeld)
+		{
+			if (altitude > MAP_TOP_EDGE)
+				altitude -= thrust * fElapsedTime;
+		}
+		else if (GetKey(olc::Key::RIGHT).bHeld) {
+			if (altitude < MAP_TOP_EDGE) {
+				altitude += thrust * fElapsedTime;
+				pDeltaX += DX * fElapsedTime;
+			}
+		}
+		else if (altitude < 0)
+			altitude += (gravity * fElapsedTime);
 
+		// if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
+		if (GetKey(olc::Key::UP).bHeld) {
+			player.vCursor.y -= C_DELTA * fElapsedTime;
+			pDeltaX += DX * fElapsedTime;
+			pDeltaY -= DY * fElapsedTime;
+		}
+		// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
+		if (GetKey(olc::Key::DOWN).bHeld) {
+			player.vCursor.y += C_DELTA * fElapsedTime;
+			pDeltaY += DY * fElapsedTime;
+			pDeltaX -= DX * fElapsedTime;
+		}
 
 		if (player.vCursor.x < 0) player.vCursor.x = 0;
 		if (player.vCursor.y < 0 - WIGGLE_ROOM_TOP) player.vCursor.y = 0;
@@ -499,36 +532,13 @@ public:
 
 
 		// Apply gravity to the situation, or thrust
-		if (GetKey(olc::Key::SPACE).bHeld)
-		{
-			if (pDeltaY > MAP_TOP_EDGE)
-				pDeltaY -= thrust * fElapsedTime;
-		}
-		else if (pDeltaY < 0) // Delta is negative
-			pDeltaY += (gravity * fElapsedTime);
+		
 
-		// Rendering
-
-		// Alter VSpace
+		// Alter VSpace - This moves the map
 		vSpace.x += (int)VSPEED_X * fElapsedTime;
 
-
-		//if ((int)(vSpace.x * .001) > 0 && (int)(vSpace.x * .001) % EPOCH_MOD == 0)
-		//{
-		//	std::cout << "Erasing world..." << std::endl;
-		//	Planes.erase(Planes.begin());
-		//	vSpace.x = 0;
-		//	epoch += 1;
-		//	std::cout << "Planes: " << Planes.size() << std::endl;
-		//}
-
-		//if (Planes.size() < 2) {
-		//	NewWorld(Planes);
-		//	std::cout << "Adding world..." << std::endl;
-		//	std::cout << "Planes: " << Planes.size() << std::endl;
-		//}
-
-		if (cLoc(WORLD_WIDTH, vSpace.x, vSpace.y).x < 0)
+		// Count the worlds that have passed by
+		if (vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x < 0)
 		{
 			EPOCH++;
 			Planes.erase(Planes.begin());
@@ -554,18 +564,18 @@ public:
 
 		// Non optimized. We're iterating over the whole world and redrawing it all the time.
 		//for (int i = 0; i < Planes.size(); i++) {
-			for (int y = 0; y < Planes[0].size.y; y++) {
-				for (int x = 0; x < Planes[0].size.x; x++) {
+		for (int y = 0; y < Planes[0].size.y; y++) {
+			for (int x = 0; x < Planes[0].size.x; x++) {
 
-					olc::vi2d vCells = { x, y };
+				olc::vi2d vCells = { x, y };
 
-					// Each cell consists of 6 quads which are the faces of a cube. 
-					// vQuads will contain any quads which make up that particular cube at location {x, y} in world space
-					// 1. We begin with the x,y of world space. ->
-					GetWorldQuads(vCells, fCameraAngle, fCameraPitch, (fCameraZoom + WORLD_SCALE), vSpace, vQuads, x);
+				// Each cell consists of 6 quads which are the faces of a cube. 
+				// vQuads will contain any quads which make up that particular cube at location {x, y} in world space
+				// 1. We begin with the x,y of world space. ->
+				GetWorldQuads(vCells, fCameraAngle, fCameraPitch, (fCameraZoom + WORLD_SCALE), vSpace, vQuads, x);
 
-				}
 			}
+		}
 		//}
 
 		/*
@@ -621,10 +631,12 @@ public:
 			6) Draw Player	
 		*/ 
 
-		GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
+		//GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
+		GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime, true, true);
 		for (auto& q : vQuads) {
 			if (q.isPlayer)
-				DrawWarpedDecal(rendSelect.decal, { {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
+				DrawWarpedDecal(rendSelect.decal, { 
+					{q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} });
 			else
 			{
 				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x, q.points[1].y, olc::MAGENTA);
@@ -637,7 +649,7 @@ public:
 		vQuads.clear();
 
 		
-		DrawLine(cLoc(0,vSpace.x,vSpace.y).x, cLoc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, cLoc(WORLD_WIDTH, vSpace.x, vSpace.y).x, cLoc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, olc::GREEN);
+		DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y - 80, olc::GREEN);
 		//
 		//DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
@@ -654,23 +666,28 @@ public:
 		/*
 			7) Draw some debug info
 		*/
-		//DrawStringDecal({ 10,0 }, "Player Cursor: " + std::to_string(player.vCursor.x) + ", " + std::to_string(player.vCursor.y), olc::YELLOW, { 0.5f, 0.5f });
-		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,50 }, "vSpace.x: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.5f, 0.5f });
-		//
+		DrawStringDecal({ 10,10 }, "Score: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,19 }, "Altitude: " + std::to_string(altitude), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,27 }, "Delta-X: " + std::to_string(pDeltaX), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(pDeltaY), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,43 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,55 }, "DY: " + std::to_string(DY), olc::CYAN, { 0.47f, 0.47f });
+		
+		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f 
 		//DrawStringDecal({ 10,64 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 10,72 }, "Epoch-Modulus: " + std::to_string(EPOCH_MOD), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,10 }, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 10,18 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
-		//
-		//
-		DrawStringDecal({ 10,28 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::RED, { 0.7f, 0.7f });
-		DrawStringDecal({ 10,40 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::RED, { 0.7f, 0.7f });
-		
-		DrawStringDecal({ 500,10 }, "wShift: " + std::to_string(WORLD_SHIFT), olc::RED, { 0.7f, 0.7f });
-		DrawStringDecal({ 500,18 }, "pScale: " + std::to_string(PLAYER_SCALE), olc::RED, { 0.7f, 0.7f });
-		DrawStringDecal({ 500,26 }, "wScale: " + std::to_string(WORLD_SCALE), olc::RED, { 0.7f, 0.7f });
 
+		DrawStringDecal({ 10,100 }, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.5f, 0.5f });
+		DrawStringDecal({ 10,110 }, "Planes: " + std::to_string(Planes.size()), olc::CYAN, { 0.5f, 0.5f });
+
+		DrawStringDecal({ 460,10 }, "(Unassigned) wShift: " + std::to_string(WORLD_SHIFT), olc::GREEN, { 0.7f, 0.7f });
+		DrawStringDecal({ 460,18 }, "(I-)(U+) Player Scale: " + std::to_string(PLAYER_SCALE), olc::GREEN, { 0.7f, 0.7f });
+		DrawStringDecal({ 460,26 }, "(K-)(L+) World Scale: " + std::to_string(WORLD_SCALE), olc::GREEN, { 0.7f, 0.7f });
+		DrawStringDecal({ 460,34 }, "(H+)(L-) Cursor Delta: " + std::to_string(C_DELTA), olc::GREEN, { 0.7f, 0.7f });
+		DrawStringDecal({ 460,42 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::RED, { 0.7f, 0.7f });
+		DrawStringDecal({ 460,52 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::RED, { 0.7f, 0.7f });
+
+		DrawStringDecal({ 10, 480 }, "Player Cursor: " + std::to_string(player.vCursor.x) + ", " + std::to_string(player.vCursor.y), olc::RED, { 0.5f, 0.5f });
 		// Graceful exit if user is in full screen mode
 		return !GetKey(olc::Key::ESCAPE).bPressed;
 	}

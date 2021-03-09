@@ -1,8 +1,8 @@
 #pragma once
 #include "olcPixelGameEngine.h"
 
-const float PLAYER_OFFSET_X = 0.25f;
-const float PLAYER_OFFSET_Y = 0.25f;
+const float PLAYER_OFFSET_X = 0.15f;
+const float PLAYER_OFFSET_Y = 0.15f;
 
 
 	// A small class used to instantiate a new sprite with a decal
