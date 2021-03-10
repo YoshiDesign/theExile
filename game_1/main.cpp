@@ -91,7 +91,7 @@ class olcDungeon : public olc::PixelGameEngine
 	int EPOCH = 0;
 
 	int EPOCH_MOD = 90;
-	float VTWEAK = -6.0f;
+	float VTWEAK = WORLD_WIDTH;
 	float DX = 0.0f;
 	float DY = 0.0f;
 	float DT = 0.0f;
@@ -717,7 +717,7 @@ public:
 
 		
 		// Passing the 2nd Plane
-		if ( (int) vSpace.x > 0 && (int) ceil(vSpace.x / 100) % vSpaceMod == 0)
+		if ( (int) vSpace.x > 0 && (int) ceil(vSpace.x / 100) % (int) ( vSpaceMod + ceil((ScreenWidth() / 55))) == 0)
 		{
 			EPOCH++;
 			vSpace.x = VTWEAK;
@@ -861,13 +861,13 @@ public:
 		DrawStringDecal({ 10 ,62 }, "DT: " + std::to_string(DT), olc::CYAN, { 0.47f, 0.47f });
 		DrawLine(10, 70, 70, 70, olc::MAGENTA);
 		
-		DrawStringDecal({ 10,80}, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,90 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
-		DrawStringDecal({ 10 ,100 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10,78}, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
+		DrawStringDecal({ 10 ,91 }, "SPEEEED!: " + std::to_string(VSPEED_X), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,102 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
+		DrawStringDecal({ 10 ,112 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,122 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,132 }, "Vspace %: " + std::to_string(vSpaceMod), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,120 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,130 }, "Vspace %: " + std::to_string(vSpaceMod), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,140 }, "SPEEEEED!!!: " + std::to_string(VSPEED_X), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,130 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,140 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		DrawLine(10,148,70,148, olc::MAGENTA);
