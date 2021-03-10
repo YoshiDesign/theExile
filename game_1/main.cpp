@@ -83,22 +83,22 @@ class olcDungeon : public olc::PixelGameEngine
 	const int MAP_TOP_EDGE = -133;
 	int WORLD_SCALE = 120;
 	int WORLD_SHIFT = 1058;
-	int PLAYER_SCALE = 6;
+	int PLAYER_SCALE = 15;
 	int EPOCH = 0;
 	int EPOCH_MOD = 90;
 	float DX = 0.0f;
 	float DY = 0.0f;
 	float DT = 0.0f;
 	float C_DELTA = 0.0;
-	const int VSPEED_X = 415;
+	float VSPEED_X = 415.0f;
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
 	int Tindex = 0;
 
 	// Player start position
-	float pDeltaY = 0.0f;
-	float pDeltaX = -155.0f;
-	float altitude = -100.0f;
+	float pDeltaY = 70.0f;
+	float pDeltaX = -100.0f;
+	float altitude = -50.0f;
 
 	// Effect magnitudes
 	float gravity = 9.0f;
@@ -169,11 +169,6 @@ public:
 		
 		};
 
-		// Address a coordinate which exists in the world
-		sCell& GetCell(const olc::vi2d& v){ return gps.GetCell(v); }
-
-		const std::vector<sCell> VC() { return gps.VC(); }
-
 		olc::vi2d dimMax() { return { size.x, size.y } ;}
 
 		void UpdatePlane()
@@ -183,15 +178,15 @@ public:
 				for (int x = 0; x < size.x; x++)
 				{
 					// Nothing is a wall from the start
-					GetCell({ x, y }).wall = false;
+					gps.GetCell({ x, y }).wall = false;
 
 					// Assign each face a tile from the spritesheet
-					GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
-					GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 0 } *vTileSize;
-					GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } *vTileSize;
-					GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } *vTileSize;
-					GetCell({ x, y }).id[Face::West] = olc::vi2d{ 0, 0 } *vTileSize;
-					GetCell({ x, y }).id[Face::East] = olc::vi2d{ 0, 0 } *vTileSize;
+					gps.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
+					gps.GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 0 } *vTileSize;
+					gps.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } *vTileSize;
+					gps.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } *vTileSize;
+					gps.GetCell({ x, y }).id[Face::West] = olc::vi2d{ 0, 0 } *vTileSize;
+					gps.GetCell({ x, y }).id[Face::East] = olc::vi2d{ 0, 0 } *vTileSize;
 
 				}
 
@@ -219,46 +214,59 @@ public:
 	public:
 		olc::vi2d size;
 		std::vector<Plane> planes;
+		std::vector<sCell> allCells;
 
 		Plane plane_1;
 		Plane plane_2;
-		std::vector<sCell> allCells;
 
 	public:
-		World(){
+		World() {
 
 			size = { WORLD_WIDTH * 2, WORLD_HEIGHT };
-			
+
 		}
-		 
+
 		void Create()
 		{
 			// Setup Planes
 			plane_1 = Plane(WORLD_WIDTH, WORLD_HEIGHT, 1);
 			plane_2 = Plane(WORLD_WIDTH, WORLD_HEIGHT, 2);
 
-			planes.push_back(plane_1);
-			planes.push_back(plane_2);
+			// These are currently unused
+			// planes.push_back(plane_1);
+			// planes.push_back(plane_2);
 
 			// Implicitly allocates proper size. Is that bad?
-			allCells.insert(allCells.end(),plane_1.gps.vCells.begin(), plane_1.gps.vCells.end());
+			allCells.insert(allCells.end(), plane_1.gps.vCells.begin(), plane_1.gps.vCells.end());
 			allCells.insert(allCells.end(), plane_2.gps.vCells.begin(), plane_2.gps.vCells.end());
+
+
 
 		}
 
 		olc::vi2d dimMax() { return { 2 * WORLD_WIDTH, WORLD_HEIGHT }; }
 		sCell& GetCell(const olc::vi2d& v) { return gps.GetWorldCell(v, allCells); }
 
-		void UpdateWorld()
+		/*
+			@function UpdateWorld
+			@param plane_index - 1 or 2 - first or 2nd Plane has gone by
+		*/
+		void UpdateWorld(int plane_index)
 		{
-			// When plane 1 has passed, delete plane 1. Plane 2 becomes plane 1.
-			// Create new plane. Make it Plane 2
-			// Merge it onto allCells
+			if (plane_index == 1) {
+				plane_1.UpdatePlane();
+				auto last = std::copy(std::begin(plane_1.gps.vCells), std::end(plane_1.gps.vCells), std::begin(allCells));
+			}
+		
+			if (plane_index == 0) {
+				plane_2.UpdatePlane();
+				auto last = std::copy(std::begin(plane_2.gps.vCells), std::end(plane_2.gps.vCells), std::begin(allCells) + plane_1.gps.vCells.size());
+			}
 		}
+		
 
 	private:
 		GPS gps;
-		
 
 	};
 
@@ -268,6 +276,12 @@ public:
 	Renderable rendAllWalls;
 
 	vec3d vSpace;	// Initialized using the camera's initial vector. Used to move the world in relation to the camera
+
+	// 1 World has gone by
+	int vSpaceMod = vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x / 100 ;
+	// 1 Plane has gone by
+	int vSpaceModH = (vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x / 100) / 2 ;
+
 	bool bVisible[6];
 
 	enum Face
@@ -571,20 +585,23 @@ public:
 		// ProMode
 		case 2:
 
-			if (GetKey(olc::Key::LEFT).bHeld)
-			{
-				DX -= 1.0f * fElapsedTime;
-			}
-			if (GetKey(olc::Key::RIGHT).bHeld)
-			{
-				DX += 1.0f * fElapsedTime;
-			}
+			//if (GetKey(olc::Key::LEFT).bHeld)
+			//{
+			//	DX -= 1.0f * fElapsedTime;
+			//}
+			//if (GetKey(olc::Key::RIGHT).bHeld)
+			//{
+			//	DX += 1.0f * fElapsedTime;
+			//}
 			if (GetKey(olc::Key::DOWN).bHeld)
 			{
+				DX -= 1.0f * fElapsedTime;
 				DY += 1.0f * fElapsedTime;
+				
 			}
 			if (GetKey(olc::Key::UP).bHeld)
 			{
+				DX += 1.0f * fElapsedTime;
 				DY -= 1.0f * fElapsedTime;
 			}
 			if (GetKey(olc::Key::CTRL).bHeld)
@@ -646,6 +663,8 @@ public:
 		if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
 		if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
 		if (GetKey(olc::Key::F).bHeld) Tindex += 1;
+		if (GetKey(olc::Key::F1).bHeld) VSPEED_X += 3 * fElapsedTime;
+		if (GetKey(olc::Key::F2).bHeld) VSPEED_X -= 3 * fElapsedTime;
 
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
@@ -662,14 +681,20 @@ public:
 		// Alter VSpace - This moves the map
 		vSpace.x += (int) VSPEED_X * fElapsedTime;
 
-		// Count the worlds that have passed by
-		//if (vCalc(world.width, vSpace.x, vSpace.y).x < 0)
-		//{
-		//	EPOCH++;
-		//	world.erase();
-		//	vSpace.x = 0;
-
-		//}
+		
+		// Passing the 2nd Plane
+		if ( (int) vSpace.x > 0 && (int) ceil(vSpace.x / 100) % vSpaceMod == 0)
+		{
+			EPOCH++;
+			vSpace.x = 0;
+			world.UpdateWorld(0);
+		}
+		// Passing the 1st Plane
+		else if ((int)vSpace.x > 0 && (int)ceil(vSpace.x / 100) % vSpaceModH == 0)
+		{
+			EPOCH++;
+			world.UpdateWorld(1);
+		}
 
 		/*
 			Create dummy cube to extract visible face information
@@ -772,6 +797,7 @@ public:
 		vQuads.clear();
 		
 		DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::GREEN);
+		DrawLine(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::MAGENTA);
 		//
 		//DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
@@ -799,13 +825,15 @@ public:
 		
 		DrawStringDecal({ 10,80}, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,90 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
-		DrawStringDecal({ 10 ,100 }, "Plane-1 VCells: " + std::to_string(world.plane_1.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
+		//DrawStringDecal({ 10 ,100 }, "Plane-1 VCells: " + std::to_string(world.plane_1.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
+		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,120 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,130 }, "Vspace %: " + std::to_string(vSpaceMod), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,140 }, "SPEEEEED!!!: " + std::to_string(VSPEED_X), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,130 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,140 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
-		DrawLine(10,146,70,146, olc::MAGENTA);
-		DrawStringDecal({ 10 ,152 }, "VC.x: " + std::to_string(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x), olc::RED, { 0.47f, 0.47f });
+		DrawLine(10,148,70,148, olc::MAGENTA);
+		DrawStringDecal({ 10 ,154 }, "VC.x: " + std::to_string(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x), olc::RED, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,162 }, "Tile-Index: " + std::to_string(Tindex), olc::RED, { 0.47f, 0.47f });
 		DrawLine(10, 170, 70, 170, olc::MAGENTA);
 		DrawStringDecal({ 10 ,178 }, "Max Coordinates: (" + std::to_string(world.dimMax().x) + "," + std::to_string(world.dimMax().y) + ")", olc::RED, { 0.47f, 0.47f });
