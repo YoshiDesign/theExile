@@ -81,11 +81,16 @@ class olcDungeon : public olc::PixelGameEngine
 	static const int WORLD_WIDTH = (int)(SCREEN_WIDTH / 8);
 	const int MAP_LEFT_EDGE = 0;
 	const int MAP_TOP_EDGE = -133;
-	int WORLD_SCALE = 120;
 	int WORLD_SHIFT = 1058;
-	int PLAYER_SCALE = 15;
+
+	int WORLD_SCALE = 58;
+	//int WORLD_SCALE = 120;
+	int PLAYER_SCALE = 10;
+	//int PLAYER_SCALE = 15;
+
 	int EPOCH = 0;
 	int EPOCH_MOD = 90;
+	float VTWEAK = -6.0f;
 	float DX = 0.0f;
 	float DY = 0.0f;
 	float DT = 0.0f;
@@ -94,6 +99,7 @@ class olcDungeon : public olc::PixelGameEngine
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
 	int Tindex = 0;
+	int WorldUpdated = 0;
 
 	// Player start position
 	float pDeltaY = 70.0f;
@@ -253,18 +259,43 @@ public:
 		*/
 		void UpdateWorld(int plane_index)
 		{
-			if (plane_index == 1) {
-				plane_1.UpdatePlane();
-				auto last = std::copy(std::begin(plane_1.gps.vCells), std::end(plane_1.gps.vCells), std::begin(allCells));
-			}
-		
+
+			/*
+				Instead of doing it this way, copy the 2nd half into a buffer, update the 1st half w/ the buffer
+				then 
+			*/
+
+
 			if (plane_index == 0) {
 				plane_2.UpdatePlane();
 				auto last = std::copy(std::begin(plane_2.gps.vCells), std::end(plane_2.gps.vCells), std::begin(allCells) + plane_1.gps.vCells.size());
+				std::cout << "Updated 2nd Plane!" << std::endl;
 			}
+
+			if (plane_index == 1) {
+				plane_1.UpdatePlane();
+				auto last = std::copy(std::begin(plane_1.gps.vCells), std::end(plane_1.gps.vCells), std::begin(allCells));
+				std::cout << "Updated 1st Plane!" << std::endl;
+			}
+
+			// Other Strategy
+			if (plane_index == 3) {
+
+				// update any plane
+				plane_1.UpdatePlane();
+				plane_2.UpdatePlane();
+
+				// copy into the first half of allCells
+				auto last = std::copy(std::begin(plane_1.gps.vCells), std::end(plane_1.gps.vCells), std::begin(allCells));
+
+				// We don't need to worry about the 2nd half, right?
+				std::copy(std::begin(plane_2.gps.vCells), std::end(plane_2.gps.vCells), last);
+				std::cout << "Updated with new clout." << std::endl;
+			}
+		
 		}
 		
-
+		 
 	private:
 		GPS gps;
 
@@ -652,10 +683,10 @@ public:
 		//if (GetKey(olc::Key::R).bPressed)
 			//resetCamera();
 
-		if (GetKey(olc::Key::I).bHeld) PLAYER_SCALE--;
-		if (GetKey(olc::Key::U).bHeld) PLAYER_SCALE++;
-		if (GetKey(olc::Key::L).bHeld) WORLD_SCALE++;
-		if (GetKey(olc::Key::K).bHeld) WORLD_SCALE--;
+		if (GetKey(olc::Key::I).bPressed) PLAYER_SCALE--;
+		if (GetKey(olc::Key::U).bPressed) PLAYER_SCALE++;
+		if (GetKey(olc::Key::L).bPressed) WORLD_SCALE++;
+		if (GetKey(olc::Key::K).bPressed) WORLD_SCALE--;
 		if (GetKey(olc::Key::H).bPressed) C_DELTA += 1.0f;
 		if (GetKey(olc::Key::G).bPressed) C_DELTA -= 1.0f;
 		if (GetKey(olc::Key::X).bHeld) DX += 1.0f;
@@ -663,8 +694,10 @@ public:
 		if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
 		if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
 		if (GetKey(olc::Key::F).bHeld) Tindex += 1;
-		if (GetKey(olc::Key::F1).bHeld) VSPEED_X += 3 * fElapsedTime;
-		if (GetKey(olc::Key::F2).bHeld) VSPEED_X -= 3 * fElapsedTime;
+		if (GetKey(olc::Key::F1).bHeld) VSPEED_X += 50 * fElapsedTime;
+		if (GetKey(olc::Key::F2).bHeld) VSPEED_X -= 50 * fElapsedTime;
+		if (GetKey(olc::Key::F3).bPressed) VTWEAK -= 1;
+		if (GetKey(olc::Key::F4).bPressed) VTWEAK += 1;
 
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
@@ -686,15 +719,19 @@ public:
 		if ( (int) vSpace.x > 0 && (int) ceil(vSpace.x / 100) % vSpaceMod == 0)
 		{
 			EPOCH++;
-			vSpace.x = 0;
-			world.UpdateWorld(0);
+			vSpace.x = VTWEAK;
+			std::cout << "Updating 2nd Plane..." << std::endl;
+			world.UpdateWorld(3);
+
 		}
 		// Passing the 1st Plane
-		else if ((int)vSpace.x > 0 && (int)ceil(vSpace.x / 100) % vSpaceModH == 0)
-		{
-			EPOCH++;
-			world.UpdateWorld(1);
-		}
+		//else if ((int)vSpace.x > vSpaceMod / 2 && (int)ceil(vSpace.x / 100) % vSpaceModH == 0)
+		//{
+		//	std::cout << "Updating 1st Plane..." << std::endl;
+		//	EPOCH++;
+		//	world.UpdateWorld(1);
+		//	vSpace.x += 10;
+		//}
 
 		/*
 			Create dummy cube to extract visible face information
@@ -796,8 +833,8 @@ public:
 		}
 		vQuads.clear();
 		
-		DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::GREEN);
-		DrawLine(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::MAGENTA);
+		//DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::GREEN);
+		//DrawLine(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::MAGENTA);
 		//
 		//DrawStringDecal({ 500,0  + 20}, "P-0: "+ std::to_string(vQuads[1].points[0].x) + ", " + std::to_string(vQuads[1].points[0].y), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 500,8  + 20}, "P-1: "+ std::to_string(vQuads[1].points[1].x) + ", " + std::to_string(vQuads[1].points[1].y), olc::CYAN, { 0.5f, 0.5f });
@@ -825,7 +862,7 @@ public:
 		
 		DrawStringDecal({ 10,80}, "Epoch: " + std::to_string(EPOCH), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,90 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
-		//DrawStringDecal({ 10 ,100 }, "Plane-1 VCells: " + std::to_string(world.plane_1.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,100 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,120 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,130 }, "Vspace %: " + std::to_string(vSpaceMod), olc::WHITE, { 0.47f, 0.47f });
