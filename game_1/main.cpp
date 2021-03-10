@@ -89,6 +89,7 @@ class olcDungeon : public olc::PixelGameEngine
 	//int PLAYER_SCALE = 15;
 
 	int EPOCH = 0;
+
 	int EPOCH_MOD = 90;
 	float VTWEAK = -6.0f;
 	float DX = 0.0f;
