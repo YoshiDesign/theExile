@@ -1,34 +1,38 @@
 #pragma once
 #include "olcPixelGameEngine.h"
 #include "Helpers.h"
+#include "World.h"
 #include <string>
 class Player {
 
 
 private:
 
-	Renderable vPlayer;
 	olc::vf2d screenPosition;
 	olc::vf2d worldPosition;
 	
 
 public:
-	olc::vf2d vCursor = { 10.0f, 10.0f };
-	olc::vi2d vTileCursor = { 9.0f,0.0f };
-	// olc::vi2d playerPosition = { 0.0f, 0.0f };
+	Renderable p1;
+	olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
+	olc::vf2d location = { 5,0 };
+	olc::vi2d tile = {};
+	enum Aframes {
+
+	};
+	
 	Player() {
 		
 	};
 
-	Player(std::string file, olc::vf2d pStart) {
-		
-		vPlayer.Load("../gfx/dng_select.png");
-
+	void Load(const std::string& sFile) {
+		std::cout << "LOADING PLAYER!" << std::endl;
+		p1.Load(sFile);
 	}
 
-	void update()
+	void Update(int time, int ev = 0)
 	{
-
+		tile = { (int) ceil(time * .1) % 6, ev };
 	}
 
 	~Player() {}

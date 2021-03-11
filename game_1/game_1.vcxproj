@@ -122,6 +122,7 @@
     <ClInclude Include="includes\Helpers.h" />
     <ClInclude Include="includes\olcPixelGameEngine.h" />
     <ClInclude Include="includes\Player.h" />
+    <ClInclude Include="includes\World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
