@@ -6,18 +6,31 @@ const int SPRITE_LEN_Y = 64;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
+// Player start position. Volatile
+float pDeltaY = 70.0f;
+float pDeltaX = -50.0f;
+float altitude = -50.0f;
+
 const float PLAYER_OFFSET_X = 0.15f;
 const float PLAYER_OFFSET_Y = 0.15f;
 
+const float PLAYER_X_MAX = 30.0f;
+const float PLAYER_X_MIN = -170.0f;
+const float PLAYER_Y_MIN = -85.0f;
+const float PLAYER_Y_MAX = 300.0f;
+
+const float PLAYER_MAX_SPEED = 1000.0f;
+const float PLAYER_MIN_SPEED = 415.0f;
+
 static const int WORLD_HEIGHT = (int)(SCREEN_HEIGHT / 32);
-static const int WORLD_WIDTH = (int)(SCREEN_WIDTH / 8);
+static const int WORLD_WIDTH  = (int)(SCREEN_WIDTH / 8);
 const int MAP_LEFT_EDGE = 0;
 const int MAP_TOP_EDGE = -133;
 int WORLD_SHIFT = 1058;
 
-int WORLD_SCALE = 58;
+int WORLD_SCALE = 85;
 //int WORLD_SCALE = 120;
-int PLAYER_SCALE = 10;
+int PLAYER_SCALE = 17;
 //int PLAYER_SCALE = 15;
 
 // Dimensions of each tile in spritesheet

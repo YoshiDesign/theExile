@@ -3,6 +3,9 @@
 #include "Helpers.h"
 #include "World.h"
 #include <string>
+
+
+
 class Player {
 
 
@@ -17,6 +20,11 @@ public:
 	olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
 	olc::vf2d location = { 5,0 };
 	olc::vi2d tile = {};
+	float max_speed;
+	float max_accel;
+	float max_speed_delta;
+
+
 	enum Aframes {
 
 	};

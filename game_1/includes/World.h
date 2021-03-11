@@ -73,7 +73,7 @@ public:
 				gps.GetCell({ x, y }).wall = false;
 
 				// Assign each face a tile from the spritesheet
-				gps.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize; // Calculates the position of the upper left corner on the spritesheet in pixels
+				gps.GetCell({ x, y }).id[Face::Floor] = olc::vi2d{ rand() % 3, rand() % 3 } *vTileSize;
 				gps.GetCell({ x, y }).id[Face::Top] = olc::vi2d{ 0, 0 } *vTileSize;
 				gps.GetCell({ x, y }).id[Face::North] = olc::vi2d{ 0, 0 } *vTileSize;
 				gps.GetCell({ x, y }).id[Face::South] = olc::vi2d{ 0, 0 } *vTileSize;

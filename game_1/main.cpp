@@ -87,12 +87,9 @@ class olcDungeon : public olc::PixelGameEngine
 	const int WIGGLE_ROOM_BOTTOM = 10;
 	int Tindex = 0;
 	int WorldUpdated = 0;
-	int ev = 0;
 
-	// Player start position
-	float pDeltaY = 70.0f;
-	float pDeltaX = -100.0f;
-	float altitude = -50.0f;
+	// Alters spaceship spritesheet Y
+	int ev = 0;
 
 	// Effect magnitudes
 	float gravity = 9.0f;
@@ -410,25 +407,90 @@ public:
 		// ProMode
 		case 2:
 
-			//if (GetKey(olc::Key::LEFT).bHeld)
-			//{
-			//	DX -= 1.0f * fElapsedTime;
-			//}
-			//if (GetKey(olc::Key::RIGHT).bHeld)
-			//{
-			//	DX += 1.0f * fElapsedTime;
-			//}
-			if (GetKey(olc::Key::DOWN).bHeld)
+
+			if (GetKey(olc::Key::RIGHT).bHeld && pDeltaX <= PLAYER_X_MAX) {
+				std::cout << "Holding Right " << std::endl;
+				if (VSPEED_X < PLAYER_MAX_SPEED)
+					VSPEED_X += 70 * fElapsedTime;
+
+				DX += .03 * fElapsedTime;
+			}
+			else if (pDeltaX >= PLAYER_X_MAX && !GetKey(olc::Key::LEFT).bHeld) {
+			
+				DX = DX > 0.0f ? DX - 1 * fElapsedTime : 0.0f;
+
+			}
+
+
+
+			if (GetKey(olc::Key::LEFT).bHeld && pDeltaX >= PLAYER_X_MIN) {
+				std::cout << "Holding Left" << std::endl;
+				if (VSPEED_X > PLAYER_MIN_SPEED)
+					VSPEED_X -= 70 * fElapsedTime;
+
+				DX -= .01 * fElapsedTime;
+			}
+			else if (pDeltaX <= PLAYER_X_MIN && !GetKey(olc::Key::RIGHT).bHeld) {
+			
+				DX = DX < 0.0f ? DX + 1 * fElapsedTime : 0.0f;
+
+			}
+
+
+
+
+			if (GetKey(olc::Key::DOWN).bHeld && pDeltaY >= PLAYER_Y_MAX)
 			{
-				DX -= 1.0f * fElapsedTime;
-				DY += 1.0f * fElapsedTime;
+				std::cout << "Holding Down" << std::endl;
+				// Harder steering at higher speed
+				if (VSPEED_X > 750)
+				{
+					DX -= 1.5f * fElapsedTime;
+					DY += 1.5f * fElapsedTime;
+				}
+				else {
+					DX -= 1.0f * fElapsedTime;
+					DY += 1.0f * fElapsedTime;
+				}
 				
 			}
-			if (GetKey(olc::Key::UP).bHeld)
-			{
-				DX += 1.0f * fElapsedTime;
-				DY -= 1.0f * fElapsedTime;
+			/*else if (pDeltaY <= PLAYER_Y_MAX) {
+			
+				DY > 0.0f ? DY -= 1 * fElapsedTime : DY = 0;
+				DX = DY;
+
 			}
+*/
+
+
+
+
+			if (GetKey(olc::Key::UP).bHeld && pDeltaY >= PLAYER_Y_MIN)
+			{
+				std::cout << "Holding Up" << std::endl;
+				// Harder steering at higher speed
+				if (VSPEED_X > 750)
+				{
+					DX += 1.5f * fElapsedTime;
+					DY -= 1.5f * fElapsedTime;
+				}
+				else {
+					DX += 1.0f * fElapsedTime;
+					DY -= 1.0f * fElapsedTime;
+				}
+
+			}
+			/*else if (pDeltaY <= PLAYER_Y_MIN) {
+			
+				DY < 0.0f ? DY += 1 * fElapsedTime : DY = 0;
+				DX = DY;
+
+			}*/
+
+
+
+
+
 			if (GetKey(olc::Key::CTRL).bHeld)
 			{
 				DT -= 1.0f * fElapsedTime;
@@ -441,10 +503,11 @@ public:
 			if (altitude < 0) {
 				altitude += (gravity * fElapsedTime);
 			}
-			// TODO - Thrust Bugs
-			DT < 1 && DT > -0.4f ? DT = DT : DT < -0.4f ? DT = -0.4f : DT > 1 ? DT = 0.4f : DT = DT;
-			DY < 1 && DY > -1 ? DY = DY : DY < -1 ? DY = -1 : DY > 1 ? DY = 1 : DY = DY;
-			DX < 1 && DX > -1 ? DX = DX : DX < -1 ? DX = -1 : DX > 1 ? DX = 1 : DX = DX;
+
+
+			DT = DT < 1 && DT > -0.4f ? DT : DT < -0.4f ? -0.4f : DT > 1 ? 0.4f : DT = DT;
+			DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
+			DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
 
 			pDeltaY += DY;
 			pDeltaX += DX;
@@ -489,8 +552,7 @@ public:
 		if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
 		if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
 		if (GetKey(olc::Key::F).bHeld) Tindex += 1;
-		if (GetKey(olc::Key::F1).bHeld) VSPEED_X += 50 * fElapsedTime;
-		if (GetKey(olc::Key::F2).bHeld) VSPEED_X -= 50 * fElapsedTime;
+		
 		if (GetKey(olc::Key::F3).bPressed) VTWEAK -= 1;
 		if (GetKey(olc::Key::F4).bPressed) VTWEAK += 1;
 		if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
@@ -581,13 +643,13 @@ public:
 		for (auto& q : vQuads) {
 
 			// PGE function. Takes screen-space quad coordinates and texture coordinates, and draws them appropriately
-			DrawPartialWarpedDecal
-			(
-				rendAllWalls.decal,
-				{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
-				q.tile,
-				vTileSize
-			);
+			//DrawPartialWarpedDecal
+			//(
+			//	rendAllWalls.decal,
+			//	{ {q.points[0].x, q.points[0].y}, {q.points[1].x, q.points[1].y}, {q.points[2].x, q.points[2].y}, {q.points[3].x, q.points[3].y} },
+			//	q.tile,
+			//	vTileSize
+			//);
 			
 			if (q.points[0].x <= 120) {
 
