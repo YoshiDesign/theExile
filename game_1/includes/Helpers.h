@@ -18,7 +18,9 @@ const float PLAYER_Y_MAX = 250.0f;
 
 const float PLAYER_MAX_SPEED = 1000.0f;
 const float PLAYER_MIN_SPEED = 500.0f;
-const float SPEED_DIVISOR = 480.0f;
+
+// Controls the rate of player Y per unit of VSPEED_X
+const float SPEED_DIVISOR = 580.0f;
 
 static const int WORLD_HEIGHT = (int)(SCREEN_HEIGHT / 32);
 static const int WORLD_WIDTH  = (int)(SCREEN_WIDTH / 8);

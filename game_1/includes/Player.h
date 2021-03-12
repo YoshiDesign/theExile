@@ -28,7 +28,7 @@ public:
 	// Player start position
 	float posY = 120.0f;
 	float posX = -90.0f;
-	float altitude = -50.0f;
+	float altitude = 0.0f;
 
 	Player() {
 		

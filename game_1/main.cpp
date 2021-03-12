@@ -77,7 +77,7 @@ class olcDungeon : public olc::PixelGameEngine
 	int EPOCH = 0;
 
 	int EPOCH_MOD = 90;
-	float VTWEAK = WORLD_WIDTH;
+	float VTWEAK = 76.0f;
 	float DX = 0.0f;
 	float DY = 0.0f;
 	float DT = 0.0f;
@@ -371,6 +371,8 @@ public:
 	void FlightControl(float fElapsedTime, int type)
 	{
 		float speed = (float)(VSPEED_X / SPEED_DIVISOR);
+		float _PLAYER_Y_MAX = PLAYER_Y_MAX + player.altitude;
+		float _PLAYER_Y_MIN = PLAYER_Y_MIN - player.altitude;
 
 		switch (type)
 		{
@@ -409,92 +411,81 @@ public:
 		// ProMode
 		case 2:
 
+			if (GetKey(olc::Key::RIGHT).bHeld) {
 
 
+				if (VSPEED_X <= PLAYER_MAX_SPEED) {
+					VSPEED_X += 100 * fElapsedTime;
+					PLAYER_OFFSET_X += .014 * fElapsedTime;
+				}
+
+
+			}
+			if (GetKey(olc::Key::RIGHT).bReleased)
 			{
-			
-				//
-				if (GetKey(olc::Key::RIGHT).bHeld) {
 
-
-					if (VSPEED_X <= PLAYER_MAX_SPEED) {
-						VSPEED_X += 100 * fElapsedTime;
-						PLAYER_OFFSET_X += .014 * fElapsedTime;
-					}
-
-
-				}
-				if (GetKey(olc::Key::RIGHT).bReleased)
-				{
-
-				}
-
-				//
-				if (GetKey(olc::Key::LEFT).bHeld) {
-
-					if (VSPEED_X >= PLAYER_MIN_SPEED) {
-						VSPEED_X -= 100 * fElapsedTime;
-						PLAYER_OFFSET_X -= .014 * fElapsedTime;
-					}
-				}
-				if (GetKey(olc::Key::LEFT).bReleased)
-				{
-
-				}
 			}
 
+			//
+			if (GetKey(olc::Key::LEFT).bHeld) {
 
+				if (VSPEED_X >= PLAYER_MIN_SPEED) {
+					VSPEED_X -= 100 * fElapsedTime;
+					PLAYER_OFFSET_X -= .014 * fElapsedTime;
+				}
+			}
+			if (GetKey(olc::Key::LEFT).bReleased)
 			{
 
-				if (GetKey(olc::Key::UP).bHeld && player.posY >= PLAYER_Y_MIN) {
+			}
+			
+			if (GetKey(olc::Key::UP).bHeld && player.posY >= _PLAYER_Y_MIN) {
 
 	
-						DX += speed * fElapsedTime;
-						DY -= speed * fElapsedTime;
+					DX += speed * fElapsedTime;
+					DY -= speed * fElapsedTime;
 
-
-				}
-				else if (player.posY <= PLAYER_Y_MIN)
-				{
-					player.posX = PLAYER_X_MAX_TOP;
-					player.posY = PLAYER_Y_MIN + 0.1f;
-					DY = 0;
-					DX = 0;
-				}
-
-				//
-				if (GetKey(olc::Key::DOWN).bHeld && player.posY <= PLAYER_Y_MAX) {
-
-						DX -= speed * fElapsedTime;
-						DY += speed * fElapsedTime;
-
-
-				}
-				else if (player.posY >= PLAYER_Y_MAX)
-				{
-					player.posX = PLAYER_X_MAX_BOTTOM;
-					player.posY = PLAYER_Y_MAX - 0.1f;
-					DX = 0;
-					DY = 0;
-				}
 
 			}
+			else if (player.posY <= _PLAYER_Y_MIN)
+			{
+				player.posX = PLAYER_X_MAX_TOP;
+				player.posY = _PLAYER_Y_MIN + 0.1f;
+				DY = 0;
+				DX = 0;
+			}
+
+			if (GetKey(olc::Key::DOWN).bHeld && player.posY <= _PLAYER_Y_MAX) {
+
+					DX -= speed * fElapsedTime;
+					DY += speed * fElapsedTime;
 
 
+			}
+			else if (player.posY >= _PLAYER_Y_MAX)
+			{
+				player.posX = PLAYER_X_MAX_BOTTOM;
+				player.posY = _PLAYER_Y_MAX - 0.1f;
+				DX = 0;
+				DY = 0;
+			}
 
 			if (GetKey(olc::Key::W).bHeld)
 			{
-				DT -= 1.0f * fElapsedTime;
+				DT -= 0.09f * fElapsedTime;
 			}
-			if (GetKey(olc::Key::S ).bHeld)
+			else if (GetKey(olc::Key::W).bReleased)
 			{
-				DT += 1.0f * fElapsedTime;
+				do
+				{
+					DT += 0.0001f * fElapsedTime;
+				} while (DT < 0.0f);
 			}
 
+			// Return to ground
 			if (player.altitude < 0) {
 				player.altitude += (gravity * fElapsedTime);
 			}
-
 
 			movePlayer();
 
@@ -715,7 +706,7 @@ public:
 		*/
 		DrawStringDecal({ 10,10 }, "Score: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.72f, 0.72f });
 		//DrawStringDecal({ 300,10 }, "MOD: " + std::to_string((int)(vSpace.x / 10) % 6), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,19 }, "player.altitude: " + std::to_string(player.altitude), olc::CYAN, { 0.72f, 0.72f });
+		//DrawStringDecal({ 10 ,19 }, "" + std::to_string(), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,27 }, "Delta-X: " + std::to_string(player.posX), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(player.posY), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
@@ -724,7 +715,7 @@ public:
 		DrawLine(10, 70, 70, 70, olc::MAGENTA);
 		
 		DrawStringDecal({ 10,78}, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
-		DrawStringDecal({ 10 ,91 }, "SPEEEED!: " + std::to_string(VSPEED_X), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
 		DrawStringDecal({ 10 ,102 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
 		DrawStringDecal({ 10 ,112 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,122 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
