@@ -360,8 +360,8 @@ public:
 				// The player. Offset the player from the cursor
 				for (auto &pc : cube)
 				{
-					pc.y += altitude + pDeltaY;
-					pc.x += pDeltaX;
+					pc.y += player.altitude + player.posY;
+					pc.x += player.posX;
 				}
 				MakeEntity(6, 5, 4, 7, Face::North, cube);
 		}
@@ -370,6 +370,8 @@ public:
 
 	void FlightControl(float fElapsedTime, int type)
 	{
+		float speed = (float)(VSPEED_X / SPEED_DIVISOR);
+
 		switch (type)
 		{
 
@@ -378,145 +380,139 @@ public:
 			// Arrow keys to move the selection cursor around map (boundary checked)
 			if (GetKey(olc::Key::LEFT).bHeld)
 			{
-				if (altitude > MAP_TOP_EDGE)
-					altitude -= thrust * fElapsedTime;
+				if (player.altitude > MAP_TOP_EDGE)
+					player.altitude -= thrust * fElapsedTime;
 			}
 			else if (GetKey(olc::Key::RIGHT).bHeld) {
-				if (altitude < MAP_TOP_EDGE) {
-					altitude += thrust * fElapsedTime;
-					pDeltaX += 35 * fElapsedTime;
+				if (player.altitude < MAP_TOP_EDGE) {
+					player.altitude += thrust * fElapsedTime;
+					player.posX += 35 * fElapsedTime;
 				}
 			}
-			else if (altitude < 0) {
-				altitude += (gravity * fElapsedTime);
+			else if (player.altitude < 0) {
+				player.altitude += (gravity * fElapsedTime);
 			}
 
 			// if (GetKey(olc::Key::UP).bPressed) vCursor.y--;
 			if (GetKey(olc::Key::UP).bHeld) {
 				player.location.y -= C_DELTA * fElapsedTime;
-				pDeltaX += 35 * fElapsedTime;
-				pDeltaY -= 35 * fElapsedTime;
+				player.posX += 35 * fElapsedTime;
+				player.posY -= 35 * fElapsedTime;
 			}
 			// if (GetKey(olc::Key::DOWN).bPressed) vCursor.y++;
 			if (GetKey(olc::Key::DOWN).bHeld) {
 				player.location.y += C_DELTA * fElapsedTime;
-				pDeltaY += 35 * fElapsedTime;
-				pDeltaX -= 35 * fElapsedTime;
+				player.posY += 35 * fElapsedTime;
+				player.posX -= 35 * fElapsedTime;
 			}
 
 		// ProMode
 		case 2:
 
 
-			if (GetKey(olc::Key::RIGHT).bHeld && pDeltaX <= PLAYER_X_MAX) {
-				std::cout << "Holding Right " << std::endl;
-				if (VSPEED_X < PLAYER_MAX_SPEED)
-					VSPEED_X += 70 * fElapsedTime;
 
-				DX += .03 * fElapsedTime;
-			}
-			else if (pDeltaX >= PLAYER_X_MAX && !GetKey(olc::Key::LEFT).bHeld) {
-			
-				DX = DX > 0.0f ? DX - 1 * fElapsedTime : 0.0f;
-
-			}
-
-
-
-			if (GetKey(olc::Key::LEFT).bHeld && pDeltaX >= PLAYER_X_MIN) {
-				std::cout << "Holding Left" << std::endl;
-				if (VSPEED_X > PLAYER_MIN_SPEED)
-					VSPEED_X -= 70 * fElapsedTime;
-
-				DX -= .01 * fElapsedTime;
-			}
-			else if (pDeltaX <= PLAYER_X_MIN && !GetKey(olc::Key::RIGHT).bHeld) {
-			
-				DX = DX < 0.0f ? DX + 1 * fElapsedTime : 0.0f;
-
-			}
-
-
-
-
-			if (GetKey(olc::Key::DOWN).bHeld && pDeltaY >= PLAYER_Y_MAX)
 			{
-				std::cout << "Holding Down" << std::endl;
-				// Harder steering at higher speed
-				if (VSPEED_X > 750)
-				{
-					DX -= 1.5f * fElapsedTime;
-					DY += 1.5f * fElapsedTime;
-				}
-				else {
-					DX -= 1.0f * fElapsedTime;
-					DY += 1.0f * fElapsedTime;
-				}
-				
-			}
-			/*else if (pDeltaY <= PLAYER_Y_MAX) {
 			
-				DY > 0.0f ? DY -= 1 * fElapsedTime : DY = 0;
-				DX = DY;
+				//
+				if (GetKey(olc::Key::RIGHT).bHeld) {
 
+
+					if (VSPEED_X <= PLAYER_MAX_SPEED) {
+						VSPEED_X += 100 * fElapsedTime;
+						PLAYER_OFFSET_X += .014 * fElapsedTime;
+					}
+
+
+				}
+				if (GetKey(olc::Key::RIGHT).bReleased)
+				{
+
+				}
+
+				//
+				if (GetKey(olc::Key::LEFT).bHeld) {
+
+					if (VSPEED_X >= PLAYER_MIN_SPEED) {
+						VSPEED_X -= 100 * fElapsedTime;
+						PLAYER_OFFSET_X -= .014 * fElapsedTime;
+					}
+				}
+				if (GetKey(olc::Key::LEFT).bReleased)
+				{
+
+				}
 			}
-*/
 
 
-
-
-			if (GetKey(olc::Key::UP).bHeld && pDeltaY >= PLAYER_Y_MIN)
 			{
-				std::cout << "Holding Up" << std::endl;
-				// Harder steering at higher speed
-				if (VSPEED_X > 750)
-				{
-					DX += 1.5f * fElapsedTime;
-					DY -= 1.5f * fElapsedTime;
+
+				if (GetKey(olc::Key::UP).bHeld && player.posY >= PLAYER_Y_MIN) {
+
+	
+						DX += speed * fElapsedTime;
+						DY -= speed * fElapsedTime;
+
+
 				}
-				else {
-					DX += 1.0f * fElapsedTime;
-					DY -= 1.0f * fElapsedTime;
+				else if (player.posY <= PLAYER_Y_MIN)
+				{
+					player.posX = PLAYER_X_MAX_TOP;
+					player.posY = PLAYER_Y_MIN + 0.1f;
+					DY = 0;
+					DX = 0;
+				}
+
+				//
+				if (GetKey(olc::Key::DOWN).bHeld && player.posY <= PLAYER_Y_MAX) {
+
+						DX -= speed * fElapsedTime;
+						DY += speed * fElapsedTime;
+
+
+				}
+				else if (player.posY >= PLAYER_Y_MAX)
+				{
+					player.posX = PLAYER_X_MAX_BOTTOM;
+					player.posY = PLAYER_Y_MAX - 0.1f;
+					DX = 0;
+					DY = 0;
 				}
 
 			}
-			/*else if (pDeltaY <= PLAYER_Y_MIN) {
-			
-				DY < 0.0f ? DY += 1 * fElapsedTime : DY = 0;
-				DX = DY;
-
-			}*/
 
 
 
-
-
-			if (GetKey(olc::Key::CTRL).bHeld)
+			if (GetKey(olc::Key::W).bHeld)
 			{
 				DT -= 1.0f * fElapsedTime;
 			}
-			if (GetKey(olc::Key::SHIFT ).bHeld)
+			if (GetKey(olc::Key::S ).bHeld)
 			{
 				DT += 1.0f * fElapsedTime;
 			}
 
-			if (altitude < 0) {
-				altitude += (gravity * fElapsedTime);
+			if (player.altitude < 0) {
+				player.altitude += (gravity * fElapsedTime);
 			}
 
 
-			DT = DT < 1 && DT > -0.4f ? DT : DT < -0.4f ? -0.4f : DT > 1 ? 0.4f : DT = DT;
-			DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
-			DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
-
-			pDeltaY += DY;
-			pDeltaX += DX;
-			altitude += DT;
+			movePlayer();
 
 		default:
 			break;
 		}
 		
+	}
+
+	void movePlayer()
+	{
+		DT = DT < 1 && DT > -0.4f ? DT : DT < -0.4f ? -0.4f : DT > 1 ? 0.4f : DT = DT;
+		DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
+		DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
+
+		player.posY += DY;
+		player.posX += DX;
+		player.altitude += DT;
 	}
 
 	bool OnUserUpdate(float fElapsedTime) override
@@ -677,7 +673,7 @@ public:
 
 		player.Update(vSpace.x, ev);
 		//GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
-		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime, true, true);
+		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, fElapsedTime, true, true);
 		for (auto& q : vQuads) {
 			if (q.isPlayer) {
 				
@@ -712,16 +708,16 @@ public:
 		//DrawStringDecal({ 500,48 + 20 }, "V-2: " + std::to_string(vQuads[0].points[2].x) + ", " + std::to_string(vQuads[0].points[2].y), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 500,56 + 20 }, "V-3: " + std::to_string(vQuads[0].points[3].x) + ", " + std::to_string(vQuads[0].points[3].y), olc::CYAN, { 0.5f, 0.5f });
 		//DrawStringDecal({ 500,64 + 20 }, "Gravity: " + std::to_string(gravity), olc::RED, { 0.5f, 0.5f });
-		//DrawStringDecal({ 500,72 + 20 }, "Delta-Y: " + std::to_string(pDeltaY), olc::WHITE, { 0.5f, 0.5f });
+		//DrawStringDecal({ 500,72 + 20 }, "Delta-Y: " + std::to_string(player.posY), olc::WHITE, { 0.5f, 0.5f });
 
 		/*
 			7) Draw some debug info
 		*/
 		DrawStringDecal({ 10,10 }, "Score: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.72f, 0.72f });
 		//DrawStringDecal({ 300,10 }, "MOD: " + std::to_string((int)(vSpace.x / 10) % 6), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,19 }, "Altitude: " + std::to_string(altitude), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,27 }, "Delta-X: " + std::to_string(pDeltaX), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(pDeltaY), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,19 }, "player.altitude: " + std::to_string(player.altitude), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,27 }, "Delta-X: " + std::to_string(player.posX), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(player.posY), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,55 }, "DY: " + std::to_string(DY), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,62 }, "DT: " + std::to_string(DT), olc::CYAN, { 0.47f, 0.47f });

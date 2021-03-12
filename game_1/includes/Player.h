@@ -20,15 +20,16 @@ public:
 	olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
 	olc::vf2d location = { 5,0 };
 	olc::vi2d tile = {};
+
 	float max_speed;
 	float max_accel;
 	float max_speed_delta;
 
+	// Player start position
+	float posY = 120.0f;
+	float posX = -90.0f;
+	float altitude = -50.0f;
 
-	enum Aframes {
-
-	};
-	
 	Player() {
 		
 	};

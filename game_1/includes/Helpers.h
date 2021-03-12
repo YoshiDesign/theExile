@@ -6,21 +6,19 @@ const int SPRITE_LEN_Y = 64;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-// Player start position. Volatile
-float pDeltaY = 70.0f;
-float pDeltaX = -50.0f;
-float altitude = -50.0f;
+// Player's offset from the ctr of the screen
+float PLAYER_OFFSET_X = 0.15f;
+float PLAYER_OFFSET_Y = 0.15f;
 
-const float PLAYER_OFFSET_X = 0.15f;
-const float PLAYER_OFFSET_Y = 0.15f;
-
-const float PLAYER_X_MAX = 30.0f;
+const float PLAYER_X_MAX_TOP = 11.909f;
+const float PLAYER_X_MAX_BOTTOM = -220.1002f;
 const float PLAYER_X_MIN = -170.0f;
-const float PLAYER_Y_MIN = -85.0f;
-const float PLAYER_Y_MAX = 300.0f;
+const float PLAYER_Y_MIN = 18.0f;
+const float PLAYER_Y_MAX = 250.0f;
 
 const float PLAYER_MAX_SPEED = 1000.0f;
-const float PLAYER_MIN_SPEED = 415.0f;
+const float PLAYER_MIN_SPEED = 500.0f;
+const float SPEED_DIVISOR = 480.0f;
 
 static const int WORLD_HEIGHT = (int)(SCREEN_HEIGHT / 32);
 static const int WORLD_WIDTH  = (int)(SCREEN_WIDTH / 8);
