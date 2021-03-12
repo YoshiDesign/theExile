@@ -120,6 +120,7 @@
   <ItemGroup>
     <ClInclude Include="includes\Camera.h" />
     <ClInclude Include="includes\Helpers.h" />
+    <ClInclude Include="includes\Meteor.h" />
     <ClInclude Include="includes\olcPixelGameEngine.h" />
     <ClInclude Include="includes\Player.h" />
     <ClInclude Include="includes\World.h" />

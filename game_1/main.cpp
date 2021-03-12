@@ -62,6 +62,7 @@
 #include "includes/Helpers.h"
 #include "includes/Camera.h"
 #include "includes/World.h"
+#include "includes/Meteor.h"
 
 /*									   
 
@@ -94,6 +95,8 @@ class olcDungeon : public olc::PixelGameEngine
 	// Effect magnitudes
 	float gravity = 9.0f;
 	float thrust = 36.0f;
+
+	std::vector<Meteor> allMeteors[100];
 
 public:
 	olcDungeon()
@@ -270,7 +273,6 @@ public:
 		std::array<vec3d, 8> projCube = CreateCube(vCell, fAngle, fPitch, fScale, vSpace);
 
 		// 4. Every vertex of the cube is now properly positioned
-
 		sCell& cell = world.GetCell({ vCell.x % WORLD_WIDTH, vCell.y });
 
 		// Defines the faces of the cube. Each int is an ID of which vertex we want to acknowledge. Face comes from enum.
@@ -415,8 +417,8 @@ public:
 
 
 				if (VSPEED_X <= PLAYER_MAX_SPEED) {
-					VSPEED_X += 100 * fElapsedTime;
-					PLAYER_OFFSET_X += .014 * fElapsedTime;
+					VSPEED_X += VSPEED_DELTA * fElapsedTime;
+					PLAYER_OFFSET_X += VSPEED_OFFSET * fElapsedTime;
 				}
 
 
@@ -430,8 +432,8 @@ public:
 			if (GetKey(olc::Key::LEFT).bHeld) {
 
 				if (VSPEED_X >= PLAYER_MIN_SPEED) {
-					VSPEED_X -= 100 * fElapsedTime;
-					PLAYER_OFFSET_X -= .014 * fElapsedTime;
+					VSPEED_X -= VSPEED_DELTA * fElapsedTime;
+					PLAYER_OFFSET_X -= VSPEED_OFFSET * fElapsedTime;
 				}
 			}
 			if (GetKey(olc::Key::LEFT).bReleased)
@@ -450,7 +452,7 @@ public:
 			else if (player.posY <= _PLAYER_Y_MIN)
 			{
 				player.posX = PLAYER_X_MAX_TOP;
-				player.posY = _PLAYER_Y_MIN + 0.1f;
+				player.posY = _PLAYER_Y_MIN + 0.1f; // +0.1 prevents clipping
 				DY = 0;
 				DX = 0;
 			}
@@ -459,32 +461,35 @@ public:
 
 					DX -= speed * fElapsedTime;
 					DY += speed * fElapsedTime;
-
-
 			}
 			else if (player.posY >= _PLAYER_Y_MAX)
 			{
 				player.posX = PLAYER_X_MAX_BOTTOM;
-				player.posY = _PLAYER_Y_MAX - 0.1f;
+				player.posY = _PLAYER_Y_MAX - 0.1f; // -0.1 prevents clipping
 				DX = 0;
 				DY = 0;
 			}
 
-			if (GetKey(olc::Key::W).bHeld)
+			if (GetKey(olc::Key::W).bHeld && player.altitude > MAX_ALTITUDE)
 			{
-				DT -= 0.09f * fElapsedTime;
+				DT -= V_THRUST * fElapsedTime;
 			}
-			else if (GetKey(olc::Key::W).bReleased)
+			else if (DT < 0.0f)
 			{
-				do
-				{
-					DT += 0.0001f * fElapsedTime;
-				} while (DT < 0.0f);
+				DT += 0.04f * fElapsedTime;
+			}
+			else if (DT > 0.0f)
+			{
+				DT = 0.0f;
 			}
 
 			// Return to ground
 			if (player.altitude < 0) {
 				player.altitude += (gravity * fElapsedTime);
+			}
+			else if (player.altitude > 0.0f)
+			{
+				player.altitude = 0.0f;
 			}
 
 			movePlayer();
@@ -497,13 +502,21 @@ public:
 
 	void movePlayer()
 	{
-		DT = DT < 1 && DT > -0.4f ? DT : DT < -0.4f ? -0.4f : DT > 1 ? 0.4f : DT = DT;
+
+		// Increase or decrease our lower & upper world boudaries, respectively, to account for altitude
+		PLAYER_Y_MIN = PLAYER_STATIC_Y_MIN + player.altitude;
+		PLAYER_Y_MAX = PLAYER_STATIC_Y_MAX - player.altitude;
+
+		// Determine vector deltas
+		DT = DT < 1 && DT > -V_MAX ? DT : DT < -V_MAX ? -V_MAX : DT > 1 ? V_MAX : DT = DT;
 		DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
 		DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
 
+		// Apply vector deltas
 		player.posY += DY;
 		player.posX += DX;
 		player.altitude += DT;
+
 	}
 
 	bool OnUserUpdate(float fElapsedTime) override
@@ -661,7 +674,6 @@ public:
 			6) Draw Player	
 		*/ 
 
-
 		player.Update(vSpace.x, ev);
 		//GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
 		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, fElapsedTime, true, true);
@@ -685,6 +697,16 @@ public:
 
 		}
 		vQuads.clear();
+
+		if (DT == 0.0)
+			DrawStringDecal({ 20 ,340 }, "Thrust V." + std::to_string((int) floor(1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
+		else
+			DrawStringDecal({ 20 ,340 }, "Thrust V." + std::to_string((int) floor(-1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
+
+		DrawLine(20, 350, 120, 350, olc::MAGENTA);
+		DrawLine(20, 350, 20, 370, olc::MAGENTA);
+		DrawLine(20, 370, 120, 370, olc::MAGENTA);
+		DrawLine(120, 350, 120, 370, olc::MAGENTA);
 		
 		//DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::GREEN);
 		//DrawLine(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::MAGENTA);
@@ -707,8 +729,8 @@ public:
 		DrawStringDecal({ 10,10 }, "Score: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.72f, 0.72f });
 		//DrawStringDecal({ 300,10 }, "MOD: " + std::to_string((int)(vSpace.x / 10) % 6), olc::CYAN, { 0.72f, 0.72f });
 		//DrawStringDecal({ 10 ,19 }, "" + std::to_string(), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,27 }, "Delta-X: " + std::to_string(player.posX), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,35 }, "Delta-Y: " + std::to_string(player.posY), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,27 }, "Pos-X: " + std::to_string(player.posX), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10 ,35 }, "Pos-Y: " + std::to_string(player.posY), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(DX), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,55 }, "DY: " + std::to_string(DY), olc::CYAN, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,62 }, "DT: " + std::to_string(DT), olc::CYAN, { 0.47f, 0.47f });
@@ -718,8 +740,8 @@ public:
 		DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
 		DrawStringDecal({ 10 ,102 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
 		DrawStringDecal({ 10 ,112 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,122 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,132 }, "Vspace %: " + std::to_string(vSpaceMod), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,122 }, "MIN Y: " + std::to_string(PLAYER_Y_MIN), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,132 }, "MAX Y: " + std::to_string(PLAYER_Y_MAX), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,130 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,140 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });

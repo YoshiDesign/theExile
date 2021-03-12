@@ -6,18 +6,30 @@ const int SPRITE_LEN_Y = 64;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-// Player's offset from the ctr of the screen
+// Sceen Position
 float PLAYER_OFFSET_X = 0.15f;
 float PLAYER_OFFSET_Y = 0.15f;
 
-const float PLAYER_X_MAX_TOP = 11.909f;
-const float PLAYER_X_MAX_BOTTOM = -220.1002f;
-const float PLAYER_X_MIN = -170.0f;
-const float PLAYER_Y_MIN = 18.0f;
-const float PLAYER_Y_MAX = 250.0f;
+// Movement
+float PLAYER_X_MAX_TOP = 11.909f;
+float PLAYER_X_MAX_BOTTOM = -220.1002f;
+float PLAYER_X_MIN = -170.0f;
+float PLAYER_Y_MIN = 18.0f;
+float PLAYER_STATIC_Y_MIN = 18.0f;
+float PLAYER_Y_MAX = 250.0f;
+float PLAYER_STATIC_Y_MAX = 250.0f;
 
+// Speed
+const int VSPEED_DELTA = 100;
+const float VSPEED_OFFSET = 0.02;
 const float PLAYER_MAX_SPEED = 1000.0f;
 const float PLAYER_MIN_SPEED = 500.0f;
+
+// Altitude
+const int MAX_ALTITUDE = -20;	// Thrust cutoff
+const float V_THRUST = 0.09f;	// Rate of climb
+const float V_MAX = 0.4f;		// Max vertical thrust
+
 
 // Controls the rate of player Y per unit of VSPEED_X
 const float SPEED_DIVISOR = 580.0f;
@@ -28,9 +40,9 @@ const int MAP_LEFT_EDGE = 0;
 const int MAP_TOP_EDGE = -133;
 int WORLD_SHIFT = 1058;
 
-int WORLD_SCALE = 85;
+float WORLD_SCALE = 85.0f;
 //int WORLD_SCALE = 120;
-int PLAYER_SCALE = 17;
+float PLAYER_SCALE = 17.0f;
 //int PLAYER_SCALE = 15;
 
 // Dimensions of each tile in spritesheet

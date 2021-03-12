@@ -35,5 +35,8 @@
     <ClInclude Include="includes\World.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\Meteor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -32,7 +32,7 @@ public:
 
 	Player() {
 		
-	};
+	}
 
 	void Load(const std::string& sFile) {
 		std::cout << "LOADING PLAYER!" << std::endl;
