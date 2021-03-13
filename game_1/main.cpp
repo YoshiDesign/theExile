@@ -64,6 +64,8 @@
 #include "includes/World.h"
 #include "includes/Meteor.h"
 
+#define LOG(a) std::cout << a << std::endl
+
 /*									   
 
 	NOTE! This program requires a tile spritesheet NOT
@@ -83,14 +85,13 @@ class olcDungeon : public olc::PixelGameEngine
 	float DY = 0.0f;
 	float DT = 0.0f;
 	float C_DELTA = 0.0;
-	float VSPEED_X = 415.0f;
 	const int WIGGLE_ROOM_TOP = 0;
 	const int WIGGLE_ROOM_BOTTOM = 10;
 	int Tindex = 0;
 	int WorldUpdated = 0;
 
 	// Alters spaceship spritesheet Y
-	int ev = 0;
+	int ev = 1;
 
 	// Effect magnitudes
 	float gravity = 9.0f;
@@ -374,14 +375,18 @@ public:
 
 	void FlightControl(float fElapsedTime, int type)
 	{
-		float speed = (float)(VSPEED_X / SPEED_DIVISOR);
+		
 		float _PLAYER_Y_MAX = PLAYER_Y_MAX + player.altitude;
 		float _PLAYER_Y_MIN = PLAYER_Y_MIN - player.altitude;
+
+		// Keep in mind both are negative values
+		player.ascending = player.altitude < player.pAltitude;
+		
 
 		switch (type)
 		{
 
-		// ScrubMode
+		// TODO Basic menu controls
 		case 1:
 			// Arrow keys to move the selection cursor around map (boundary checked)
 			if (GetKey(olc::Key::LEFT).bHeld)
@@ -425,10 +430,6 @@ public:
 
 
 			}
-			if (GetKey(olc::Key::RIGHT).bReleased)
-			{
-
-			}
 
 			//
 			if (GetKey(olc::Key::LEFT).bHeld) {
@@ -438,16 +439,12 @@ public:
 					PLAYER_OFFSET_X -= VSPEED_OFFSET * fElapsedTime;
 				}
 			}
-			if (GetKey(olc::Key::LEFT).bReleased)
-			{
 
-			}
-			
 			if (GetKey(olc::Key::UP).bHeld && player.posY >= _PLAYER_Y_MIN) {
 
 	
-					DX += speed * fElapsedTime;
-					DY -= speed * fElapsedTime;
+					DX += player.speed * fElapsedTime;
+					DY -= player.speed * fElapsedTime;
 
 
 			}
@@ -461,8 +458,8 @@ public:
 
 			if (GetKey(olc::Key::DOWN).bHeld && player.posY <= _PLAYER_Y_MAX) {
 
-					DX -= speed * fElapsedTime;
-					DY += speed * fElapsedTime;
+					DX -= player.speed * fElapsedTime;
+					DY += player.speed * fElapsedTime;
 			}
 			else if (player.posY >= _PLAYER_Y_MAX)
 			{
@@ -472,6 +469,7 @@ public:
 				DY = 0;
 			}
 
+			// Climb
 			if (GetKey(olc::Key::W).bHeld && player.altitude > CRUISE_ALTITUDE)
 			{
 				DT -= V_THRUST * fElapsedTime;
@@ -480,6 +478,7 @@ public:
 			{
 				DT += 0.04f * fElapsedTime;
 			}
+			// Prevent thrust clipping
 			else if (DT > 0.0f)
 			{
 				DT = 0.0f;
@@ -487,14 +486,39 @@ public:
 
 			// Return to ground
 			if (player.altitude < 0) {
+
+				// Apply gravity accel
 				player.altitude += (gravity * fElapsedTime);
-			}
-			else if (player.altitude > 0.0f)
-			{
-				player.altitude = 0.0f;
+
+				// Player is descending
+				if (!player.ascending) {
+					
+					// Check for new altitude record
+					player.highest_altitude = player.pAltitude < player.highest_altitude ? player.pAltitude : player.highest_altitude;
+
+				}
+				else 
+				{
+					player.LastMaxAltitude = player.altitude;
+				}
 			}
 
-			movePlayer();
+			// TODO Camera motion while ascending / descending
+			if (player.altitude < -50.0f && player.ascending)
+			{
+				PLAYER_OFFSET_Y += 0.1 * V_MAX * fElapsedTime;	// DRY this
+			}
+			// Start moving the camera down when the lastMax and current altitude differ by 10.0
+			else if (!player.ascending && (-1 * player.LastMaxAltitude) - (-1 * player.altitude) > 10.0f )
+			{
+				PLAYER_OFFSET_Y -= .01f * fElapsedTime;
+			}
+			if (PLAYER_OFFSET_Y < 0.15f)
+			{
+				PLAYER_OFFSET_Y = RESET_PLAYER_OFFSET_Y;
+			}
+
+			movePlayer(player.pAltitude);
 
 		default:
 			break;
@@ -502,7 +526,14 @@ public:
 		
 	}
 
-	void movePlayer()
+	void CameraRise() {
+	
+	}
+	void CameraFall() {
+	
+	}
+
+	void movePlayer(float& previous_altitude)
 	{
 
 		// Increase or decrease our lower & upper world boudaries, respectively, to account for altitude
@@ -517,6 +548,7 @@ public:
 		// Apply vector deltas
 		player.posY += DY;
 		player.posX += DX;
+		previous_altitude = player.altitude;
 		player.altitude += DT;
 
 	}
@@ -574,7 +606,6 @@ public:
 		if (player.vCursor.x >= world.size.x) player.vCursor.x = world.size.x - 1;
 		if (player.vCursor.y >= world.size.y + WIGGLE_ROOM_BOTTOM) player.vCursor.y = world.size.y - 1 + WIGGLE_ROOM_BOTTOM;*/
 
-
 		// Alter VSpace - This moves the map
 		vSpace.x += (int) VSPEED_X * fElapsedTime;
 		
@@ -585,7 +616,6 @@ public:
 			vSpace.x = VTWEAK;
 			std::cout << "Updating Planes..." << std::endl;
 			world.UpdateWorld(3);
-
 		}
 		// Passing the 1st Plane - I don't think this worked?
 		//else if ((int)vSpace.x > vSpaceMod / 2 && (int)ceil(vSpace.x / 100) % vSpaceModH == 0)
@@ -684,6 +714,7 @@ public:
 		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, fElapsedTime, true, true);
 		for (auto& q : vQuads) {
 
+			// Draw the player's distance from the ground
 			DrawLine(
 				q.points[1].x + tweak_x, q.points[1].y + tweak_y, 
 				q.points[1].x + tweak_x,q.points[1].y - player.altitude, 
@@ -722,7 +753,6 @@ public:
 		else
 			DrawStringDecal({ 20 ,340 }, "V" + std::to_string((int) floor(-1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
 
-
 		/*
 			Thrust monitor
 			The length depends upon the relationship between TW and CRUISE_ALTITUDE
@@ -733,13 +763,11 @@ public:
 		DrawLine(20, 370, bLEFT.x + (-(TW * CRUISE_ALTITUDE)), 370, olc::MAGENTA);	// Bottom
 		DrawLine(tLEFT.x + (-(TW * CRUISE_ALTITUDE)), 350, bLEFT.x + (-(TW * CRUISE_ALTITUDE)), 370, olc::MAGENTA); // Right side
 		
+		float r2 = 20 * 20;
+		float x1 = -20 - (420 * DT);
+		float y1 = (int) sqrt(r2 - x1 * x1) + 0.1;
 
-
-		float r2 = 50 * 50;
-		float x1 = -50 - (1080 * DT);
-		float y1 = (int) sqrt(r2 - x1 * x1) + 0.5;
-
-		DrawLine(80 + x1 - 5, 349 - y1, 27 - CRUISE_ALTITUDE * 2, 348, olc::WHITE);
+		DrawLine(70 + x1, 349 - y1, 27 - CRUISE_ALTITUDE * 2, 348, olc::WHITE);
 		
 		//DrawRect({20,350}, {130,20}, olc::MAGENTA);
 		
@@ -785,11 +813,12 @@ public:
 		DrawLine(10, 70, 70, 70, olc::MAGENTA);
 		
 		DrawStringDecal({ 10,78}, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
-		DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
-		DrawStringDecal({ 10 ,102 }, "TW: " + std::to_string(TW), olc::WHITE, { 0.47f, 0.47f });		
-		DrawStringDecal({ 10 ,112 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,122 }, "tweak_x: " + std::to_string(tweak_x), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,132 }, "tweak_y: " + std::to_string(tweak_y), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude ), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,98 }, "Ascending: " + std::to_string(player.pAltitude > player.altitude), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,119 }, "TW: " + std::to_string(TW), olc::WHITE, { 0.47f, 0.47f });		
+		DrawStringDecal({ 10 ,127 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,135 }, "tweak_x: " + std::to_string(tweak_x), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,143 }, "tweak_y: " + std::to_string(tweak_y), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,130 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,140 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });

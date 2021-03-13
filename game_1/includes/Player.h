@@ -24,11 +24,20 @@ public:
 	float max_speed;
 	float max_accel;
 	float max_speed_delta;
+	float speed = (float)(VSPEED_X / SPEED_DIVISOR);
 
 	// Player start position
 	float posY = 120.0f;
 	float posX = -90.0f;
 	float altitude = 0.0f;
+	float pAltitude = 0.0f;	// previous altitude
+	float LastMaxAltitude = 0.0f;
+
+	// Records
+	float highest_altitude = 0.0f;
+
+	// Bools
+	bool ascending = false;
 
 	Player() {
 		
