@@ -1,10 +1,20 @@
 #pragma once
 #include "olcPixelGameEngine.h"
 
+//int acos(float x) {
+//	return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966;
+//}
+
+float RAD = 3.141592 / 2;
+int color = 0;
+
 const int SPRITE_LEN_X = 64;
 const int SPRITE_LEN_Y = 64;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+
+float tweak_x = -12.95f;
+float tweak_y = -7.87f;
 
 // Sceen Position
 float PLAYER_OFFSET_X = 0.15f;
@@ -26,12 +36,11 @@ const float PLAYER_MAX_SPEED = 1000.0f;
 const float PLAYER_MIN_SPEED = 500.0f;
 
 // Altitude
-const int MAX_ALTITUDE = -20;	// Thrust cutoff
-const float V_THRUST = 0.09f;	// Rate of climb
-const float V_MAX = 0.4f;		// Max vertical thrust
+const int CRUISE_ALTITUDE = -20; // Thrust cutoff
+const float V_THRUST = 0.09f;	 // Rate of climb
+const float V_MAX = 0.4f;		 // Max vertical thrust
 
-
-// Controls the rate of player Y per unit of VSPEED_X
+// Controls the rate of player Y per unit of VSPEED_X - Lower divisor means faster steering
 const float SPEED_DIVISOR = 580.0f;
 
 static const int WORLD_HEIGHT = (int)(SCREEN_HEIGHT / 32);
@@ -48,6 +57,19 @@ float PLAYER_SCALE = 17.0f;
 // Dimensions of each tile in spritesheet
 olc::vi2d vTileSize = { SPRITE_LEN_X, SPRITE_LEN_Y };
 
+/*
+
+HUD STUFF
+
+*/
+
+float TW = 6.7f;
+
+//
+const olc::vi2d tLEFT = {25,350};
+const olc::vi2d bLEFT = {19,370};
+const olc::vi2d tRIGHT = {bLEFT.x ,0};
+const olc::vi2d bRIGHT = {bLEFT.x,0};
 
 enum Face
 {

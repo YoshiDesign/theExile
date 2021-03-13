@@ -96,6 +96,8 @@ class olcDungeon : public olc::PixelGameEngine
 	float gravity = 9.0f;
 	float thrust = 36.0f;
 
+	const float THRUST_WIDTH = CRUISE_ALTITUDE + (TW * CRUISE_ALTITUDE);
+
 	std::vector<Meteor> allMeteors[100];
 
 public:
@@ -470,7 +472,7 @@ public:
 				DY = 0;
 			}
 
-			if (GetKey(olc::Key::W).bHeld && player.altitude > MAX_ALTITUDE)
+			if (GetKey(olc::Key::W).bHeld && player.altitude > CRUISE_ALTITUDE)
 			{
 				DT -= V_THRUST * fElapsedTime;
 			}
@@ -558,6 +560,9 @@ public:
 		if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
 		if (GetKey(olc::Key::F6).bPressed) ev += 1;
 
+		if (GetKey(olc::Key::F7).bHeld) TW += .01f;
+		if (GetKey(olc::Key::F8).bHeld) TW -= .01f;
+
 		// Smooth camera
 		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
 
@@ -582,7 +587,7 @@ public:
 			world.UpdateWorld(3);
 
 		}
-		// Passing the 1st Plane
+		// Passing the 1st Plane - I don't think this worked?
 		//else if ((int)vSpace.x > vSpaceMod / 2 && (int)ceil(vSpace.x / 100) % vSpaceModH == 0)
 		//{
 		//	std::cout << "Updating 1st Plane..." << std::endl;
@@ -678,6 +683,16 @@ public:
 		//GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
 		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, fElapsedTime, true, true);
 		for (auto& q : vQuads) {
+
+			DrawLine(
+				q.points[1].x + tweak_x, q.points[1].y + tweak_y, 
+				q.points[1].x + tweak_x,q.points[1].y - player.altitude, 
+				olc::CYAN, 0x0A0A0A);
+			DrawLine(
+				q.points[1].x + tweak_x, q.points[1].y + tweak_y, 
+				q.points[1].x + tweak_x,q.points[1].y - player.altitude, 
+				olc::MAGENTA, 0xF6F6F6);
+
 			if (q.isPlayer) {
 				
 				DrawPartialWarpedDecal(
@@ -696,17 +711,50 @@ public:
 			}
 
 		}
+
 		vQuads.clear();
+		 /*
+			HUD
+		 */
 
 		if (DT == 0.0)
-			DrawStringDecal({ 20 ,340 }, "Thrust V." + std::to_string((int) floor(1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
+			DrawStringDecal({ 20 ,340 }, "V" + std::to_string((int) floor(1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
 		else
-			DrawStringDecal({ 20 ,340 }, "Thrust V." + std::to_string((int) floor(-1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
+			DrawStringDecal({ 20 ,340 }, "V" + std::to_string((int) floor(-1.8 * (int)ceil( DT * 100))), olc::WHITE, { 0.72f, 0.72f });
 
-		DrawLine(20, 350, 120, 350, olc::MAGENTA);
-		DrawLine(20, 350, 20, 370, olc::MAGENTA);
-		DrawLine(20, 370, 120, 370, olc::MAGENTA);
-		DrawLine(120, 350, 120, 370, olc::MAGENTA);
+
+		/*
+			Thrust monitor
+			The length depends upon the relationship between TW and CRUISE_ALTITUDE
+			where TW * CRUISE_ALTITUDE + tLEFT.x is the distance from the start of the meter
+		*/
+		DrawLine(25, 350, tLEFT.x + (-(TW * CRUISE_ALTITUDE)), 350, olc::MAGENTA);	// Top
+		DrawLine(tLEFT.x, 350, bLEFT.x, 370, olc::MAGENTA);	// Left Side
+		DrawLine(20, 370, bLEFT.x + (-(TW * CRUISE_ALTITUDE)), 370, olc::MAGENTA);	// Bottom
+		DrawLine(tLEFT.x + (-(TW * CRUISE_ALTITUDE)), 350, bLEFT.x + (-(TW * CRUISE_ALTITUDE)), 370, olc::MAGENTA); // Right side
+		
+
+
+		float r2 = 50 * 50;
+		float x1 = -50 - (1080 * DT);
+		float y1 = (int) sqrt(r2 - x1 * x1) + 0.5;
+
+		DrawLine(80 + x1 - 5, 349 - y1, 27 - CRUISE_ALTITUDE * 2, 348, olc::WHITE);
+		
+		//DrawRect({20,350}, {130,20}, olc::MAGENTA);
+		
+		for (int i = 1; i <= (int)-player.altitude; i++) {
+			DrawLine(25 + (i * 2), 352, 20 + (i * 2), 368, olc::Pixel(255,200 - (i * 3 >= 200 ? 200 : i * 3),0));
+		}
+
+		// Thrust Cutoff
+		DrawLine(27 - CRUISE_ALTITUDE * 2, 348, 19 - CRUISE_ALTITUDE * 2, 370, olc::WHITE);
+
+		/*
+			ENDHUD
+		*/
+
+		//FillRect({ 22, 352 }, { int(20 - player.altitude), 17}, olc::DARK_RED);
 		
 		//DrawLine(vCalc(0,vSpace.x,vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::GREEN);
 		//DrawLine(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x, vCalc(WORLD_HEIGHT, vSpace.x, vSpace.y).y, olc::MAGENTA);
@@ -738,10 +786,10 @@ public:
 		
 		DrawStringDecal({ 10,78}, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
 		DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
-		DrawStringDecal({ 10 ,102 }, "World Planes: " + std::to_string(world.planes.size()), olc::WHITE, { 0.47f, 0.47f });		
+		DrawStringDecal({ 10 ,102 }, "TW: " + std::to_string(TW), olc::WHITE, { 0.47f, 0.47f });		
 		DrawStringDecal({ 10 ,112 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,122 }, "MIN Y: " + std::to_string(PLAYER_Y_MIN), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,132 }, "MAX Y: " + std::to_string(PLAYER_Y_MAX), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,122 }, "tweak_x: " + std::to_string(tweak_x), olc::WHITE, { 0.47f, 0.47f });
+		DrawStringDecal({ 10 ,132 }, "tweak_y: " + std::to_string(tweak_y), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,130 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,140 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
