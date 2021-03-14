@@ -56,7 +56,7 @@
 */
 
 #define OLC_PGE_APPLICATION
-#include <algorithm>
+
 #include "includes/olcPixelGameEngine.h"
 #include "includes/Player.h"
 #include "includes/Helpers.h"
@@ -504,7 +504,7 @@ public:
 			}
 
 			// TODO Camera motion while ascending / descending
-			if (player.altitude < -50.0f && player.ascending)
+			if (player.altitude < CAMERA_ASCEND && player.ascending)
 			{
 				PLAYER_OFFSET_Y += 0.1 * V_MAX * fElapsedTime;	// DRY this
 			}

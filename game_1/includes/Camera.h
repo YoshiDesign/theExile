@@ -11,6 +11,7 @@ const float CAMERA_PITCH = 12.361f;
 const float CAMERA_ANGLE = -0.29f;
 const float CAMERA_ZOOM = 12.0f;
 const olc::vf2d cameraPos = { 0.0f, 0.0f };
+const int CAMERA_ASCEND = -50;
 
 void resetCamera() {
 	olc::vf2d vCameraPos = cameraPos;
