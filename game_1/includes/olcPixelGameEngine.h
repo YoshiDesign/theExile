@@ -268,6 +268,8 @@ int main()
 
 #ifndef OLC_PGE_DEF
 #define OLC_PGE_DEF
+//#define OLC_GFX_OPENGLES2
+#define OLC_GFX_OPENGL33
 
 // O------------------------------------------------------------------------------O
 // | STANDARD INCLUDES                                                            |
@@ -3547,6 +3549,7 @@ namespace olc
 // | START RENDERER: OpenGL 3.3 (3.0 es) (sh-sh-sh-shaders....)                   |
 // O------------------------------------------------------------------------------O
 #if defined(OLC_GFX_OPENGL33)
+
 #if defined(OLC_PLATFORM_WINAPI)
 #include <dwmapi.h>
 #include <gl/GL.h>
@@ -3554,12 +3557,14 @@ namespace olc
 #if !defined(__MINGW32__)
 #pragma comment(lib, "Dwmapi.lib")
 #endif		
+
 typedef void __stdcall locSwapInterval_t(GLsizei n);
 typedef HDC glDeviceContext_t;
 typedef HGLRC glRenderContext_t;
 #define CALLSTYLE __stdcall
 #define OGL_LOAD(t, n) (t*)wglGetProcAddress(n)
 #endif
+
 
 #if defined(__linux__) || defined(__FreeBSD__)
 #include <GL/gl.h>

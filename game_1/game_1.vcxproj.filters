@@ -41,5 +41,8 @@
     <ClInclude Include="includes\windef2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="includes\um\Windows.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
