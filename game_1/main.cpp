@@ -617,14 +617,6 @@ public:
 			std::cout << "Updating Planes..." << std::endl;
 			world.UpdateWorld(3);
 		}
-		// Passing the 1st Plane - I don't think this worked?
-		//else if ((int)vSpace.x > vSpaceMod / 2 && (int)ceil(vSpace.x / 100) % vSpaceModH == 0)
-		//{
-		//	std::cout << "Updating 1st Plane..." << std::endl;
-		//	EPOCH++;
-		//	world.UpdateWorld(1);
-		//	vSpace.x += 10;
-		//}
 
 		/*
 			Create dummy cube to extract visible face information
@@ -734,7 +726,7 @@ public:
 				);
 			}
 			else
-			// Retro mode
+			// Retro mode.
 			{
 				DrawLine(q.points[0].x, q.points[0].y, q.points[1].x / 2, q.points[1].y / 2, olc::MAGENTA);
 				DrawLine(q.points[1].x / 2, q.points[1].y / 2, q.points[3].x, q.points[3].y, olc::MAGENTA);

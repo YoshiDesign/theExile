@@ -181,8 +181,6 @@
     <ClInclude Include="includes\Meteor.h" />
     <ClInclude Include="includes\olcPixelGameEngine.h" />
     <ClInclude Include="includes\Player.h" />
-    <ClInclude Include="includes\um\Windows.h" />
-    <ClInclude Include="includes\windef2.h" />
     <ClInclude Include="includes\World.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
