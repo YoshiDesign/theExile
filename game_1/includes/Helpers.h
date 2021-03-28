@@ -1,9 +1,23 @@
 #pragma once
 #include "olcPixelGameEngine.h"
 
+int Tindex = 0;
+int WorldUpdated = 0;
+
+// Alters spaceship spritesheet Y
+int ev = 1;
+
+
+
 float RAD = 3.141592 / 2;
 int color = 0;
+int EPOCH = 0;
+int EPOCH_MOD = 90;
+float VTWEAK = 76.0f;
+const int WIGGLE_ROOM_TOP = 0;
+const int WIGGLE_ROOM_BOTTOM = 10;
 
+// Sprite Dimensions
 const int SPRITE_LEN_X = 64;
 const int SPRITE_LEN_Y = 64;
 const int SCREEN_WIDTH = 640;
@@ -11,11 +25,6 @@ const int SCREEN_HEIGHT = 480;
 
 float tweak_x = -12.95f;
 float tweak_y = -7.87f;
-
-// Sceen Position
-float PLAYER_OFFSET_X = 0.15f;
-float PLAYER_OFFSET_Y = 0.15f;
-float RESET_PLAYER_OFFSET_Y = PLAYER_OFFSET_Y;
 
 // Movement
 float PLAYER_X_MAX_TOP = 11.909f;
@@ -26,21 +35,6 @@ float PLAYER_STATIC_Y_MIN = 18.0f;
 float PLAYER_Y_MAX = 250.0f;
 float PLAYER_STATIC_Y_MAX = 250.0f;
 
-// Speed
-const int VSPEED_DELTA = 100;
-const float VSPEED_OFFSET = 0.02;
-const float PLAYER_MAX_SPEED = 1000.0f;
-const float PLAYER_MIN_SPEED = 500.0f;
-const float VTHRUST_OFFSET = 0.005;
-float VSPEED_X = 415.0f;
-
-// Controls the rate of player Y per unit of VSPEED_X - Lower divisor means faster steering
-const float SPEED_DIVISOR = 650.0f;
-
-// Altitude
-const int CRUISE_ALTITUDE = -20; // Thrust cutoff
-const float V_THRUST = 0.09f;	 // Rate of climb
-const float V_MAX = 0.4f;		 // Max vertical thrust
 
 static const int WORLD_HEIGHT = (int)(SCREEN_HEIGHT / 32);
 static const int WORLD_WIDTH  = (int)(SCREEN_WIDTH / 8);
@@ -78,7 +72,9 @@ enum Face
 	South = 3,
 	West = 4,
 	Top = 5
+
 };
+
 
 // A small class used to instantiate a new sprite with a decal
 struct Renderable

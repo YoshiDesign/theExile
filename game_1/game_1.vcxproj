@@ -173,13 +173,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="includes\Controls.h" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\Camera.h" />
     <ClInclude Include="includes\Helpers.h" />
     <ClInclude Include="includes\Meteor.h" />
+    <ClInclude Include="includes\holyShip.h" />
     <ClInclude Include="includes\olcPixelGameEngine.h" />
+    <ClInclude Include="includes\Patterns\Actions.h" />
+    <ClInclude Include="includes\Patterns\Command.h" />
+    <ClInclude Include="includes\Patterns\InputHandler.h" />
+    <ClInclude Include="includes\Phys\Physics.h" />
     <ClInclude Include="includes\Player.h" />
     <ClInclude Include="includes\World.h" />
   </ItemGroup>
