@@ -7,8 +7,6 @@ int WorldUpdated = 0;
 // Alters spaceship spritesheet Y
 int ev = 1;
 
-
-
 float RAD = 3.141592 / 2;
 int color = 0;
 int EPOCH = 0;

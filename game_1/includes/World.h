@@ -133,7 +133,7 @@ public:
 
 	/*
 		@function UpdateWorld
-		@param plane_index - 1 or 2 - first or 2nd Plane has gone by
+		@param plane_index - Strategy for procedural regen
 	*/
 	void UpdateWorld(int plane_index)
 	{
@@ -143,19 +143,19 @@ public:
 			then
 		*/
 
-		if (plane_index == 0) {
-			plane_2.UpdatePlane();
-			auto last = std::copy(std::begin(plane_2.gps.vCells), std::end(plane_2.gps.vCells), std::begin(allCells) + plane_1.gps.vCells.size());
-			std::cout << "Updated 2nd Plane!" << std::endl;
-		}
+		//if (plane_index == 0) {
+		//	plane_2.UpdatePlane();
+		//	auto last = std::copy(std::begin(plane_2.gps.vCells), std::end(plane_2.gps.vCells), std::begin(allCells) + plane_1.gps.vCells.size());
+		//	std::cout << "Updated 2nd Plane!" << std::endl;
+		//}
 
-		if (plane_index == 1) {
-			plane_1.UpdatePlane();
-			auto last = std::copy(std::begin(plane_1.gps.vCells), std::end(plane_1.gps.vCells), std::begin(allCells));
-			std::cout << "Updated 1st Plane!" << std::endl;
-		}
+		//if (plane_index == 1) {
+		//	plane_1.UpdatePlane();
+		//	auto last = std::copy(std::begin(plane_1.gps.vCells), std::end(plane_1.gps.vCells), std::begin(allCells));
+		//	std::cout << "Updated 1st Plane!" << std::endl;
+		//}
 
-		// Other Strategy
+		// Best Strategy
 		if (plane_index == 3) {
 
 			allCells.clear();

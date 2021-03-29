@@ -5315,7 +5315,7 @@ namespace olc
 
 			// width / height = aspect ratio
 			Module._olc_WindowAspectRatio = $0 / $1;
-			Module.canvas.parentNode.addEventListener("resize", (e) = > {
+			Module.canvas.parentNode.addEventListener("resize", (e) => {
 
 				if (e.defaultPrevented) { e.stopPropagation(); 	return; }
 				var viewWidth = e.detail.width;
@@ -5352,10 +5352,10 @@ namespace olc
 			});
 
 			// helper function to prevent repeating the same code everywhere
-			Module._olc_ResizeCanvas = () = >
+			Module._olc_ResizeCanvas = () =>
 			{
 				// yes, we still have to wait, sigh..
-				setTimeout(() = >
+				setTimeout(() =>
 				{
 					// if default template, stretch width as well
 					if (Module.canvas.parentNode.className == 'emscripten_border')
@@ -5394,10 +5394,10 @@ namespace olc
 			Module._olc_ResizeCanvas();
 
 			// observe and react to resizing of the container element
-			var resizeObserver = new ResizeObserver((entries) = > {Module._olc_ResizeCanvas(); }).observe(Module.canvas.parentNode);
+			var resizeObserver = new ResizeObserver((entries) => {Module._olc_ResizeCanvas(); }).observe(Module.canvas.parentNode);
 
 			// observe and react to changes that occur when entering/exiting fullscreen
-			var mutationObserver = new MutationObserver((mutationsList, observer) = >
+			var mutationObserver = new MutationObserver((mutationsList, observer) =>
 			{
 				// a change has occurred, let's check them out!
 				for (var i = 0; i < mutationsList.length; i++)
@@ -5418,7 +5418,7 @@ namespace olc
 			});
 
 			// add resize listener on window
-			window.addEventListener("resize", (e) = > { Module._olc_ResizeCanvas(); });
+			window.addEventListener("resize", (e) => { Module._olc_ResizeCanvas(); });
 
 				}, vWindowSize.x, vWindowSize.y); // Fullscreen and Resize Observers
 #pragma warning restore format

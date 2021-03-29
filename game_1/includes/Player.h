@@ -19,14 +19,16 @@ public:
 	// Speed
 	const float SPEED_DIVISOR = 650.0f;
 	float VSPEED_X = 415.0f;
-	float speed = (float)(VSPEED_X / SPEED_DIVISOR);
+
+	// This means that you steer harder when moving faster
+	float speed = (float)(VSPEED_X / SPEED_DIVISOR) + 0.4f;
 
 	// Player start position
 	float posY = 120.0f;
 	float posX = -90.0f;
 	float altitude = 0.0f;
-	float pAltitude = 0.0f;	// previous altitude
-	float LastMaxAltitude = 0.0f;
+	float pAltitude = 0.0f;			// Previous altitude
+	float LastMaxAltitude = 0.0f;	// Highest altitude
 
 	// Deltas
 	float DX = 0.0f;
@@ -35,7 +37,8 @@ public:
 
 	// Altitude
 	const int CRUISE_ALTITUDE = -20; // Thrust cutoff
-	const float V_THRUST = 0.09f;	 // Rate of climb
+	//const float V_THRUST = 0.09f;	 // Rate of climb
+	const float V_THRUST = 0.4f;	 // Rate of climb
 	const float V_MAX = 0.4f;		 // Max vertical thrust
 	const float THRUST_WIDTH = CRUISE_ALTITUDE + (TW * CRUISE_ALTITUDE);
 
@@ -82,7 +85,6 @@ public:
 	}
 
 	void Load(const std::string& sFile) {
-		std::cout << "LOADING PLAYER!" << std::endl;
 		p1.Load(sFile);
 	}
 
@@ -219,12 +221,12 @@ public:
 	void movePlayer()
 	{
 
-		// Increase or decrease our lower & upper world boudaries, respectively, to account for altitude
+		// Increase or decrease our lower or upper world boudaries, respectively, to account for altitude
 		PLAYER_Y_MIN = PLAYER_STATIC_Y_MIN + altitude;
 		PLAYER_Y_MAX = PLAYER_STATIC_Y_MAX - altitude;
 
 		// Determine vector deltas
-		DT = DT < 1 && DT > -V_MAX ? DT : DT < -V_MAX ? -V_MAX : DT > 1 ? V_MAX : DT = DT;
+		DT = DT < 1 && DT > -V_MAX ? DT : DT < -V_MAX ? -V_MAX : DT > 1 ? V_MAX : DT;
 		DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
 		DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
 

@@ -15,6 +15,7 @@
 class holyShip : public olc::PixelGameEngine
 {
 private:
+
 	// What is currently being pressed
 	struct PlayerKeysInUse {
 		olc::HWButton W;
@@ -30,6 +31,9 @@ public:
 	{
 		sAppName = "YTE";
 	}
+
+	float fTargetFrameTime = 1.0f / 61.0f; // Virtual FPS of 61fps
+	float fAccumulatedTime = 0.0f;
 
 	Player player;
 	World world;
@@ -73,10 +77,8 @@ public:
 		// Button buffer
 		PlayerKeysInUse PlayerKeys = {};
 
-
-
-		player.Load("./gfx/sprite_sheet_1.png");
-		rendAllWalls.Load("./gfx/grounds.png");
+		player.Load("./assets/gfx/sprite_sheet_1.png");
+		rendAllWalls.Load("./assets/gfx/grounds.png");
 
 		world.Create();
 		return true;
@@ -282,7 +284,7 @@ public:
 		The player comes with its position tracker
 	*/
 	void GetPlayerQuads(const olc::vi2d& vCell, const float fAngle, const float fPitch,
-		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, float fElapsedTime, Player& player,
+		const float fScale, const vec3d& vSpace, std::vector<sQuad> &render, Player& player,
 		bool gravEnabled = false, bool isPlayer = false)
 	{
 		std::array<vec3d, 8> cube = CreateCube(vCell, fAngle, fPitch, fScale + PLAYER_SCALE, vSpace);
@@ -298,12 +300,8 @@ public:
 			render.push_back({ cube[v1], cube[v2], cube[v3], cube[v4], cell.id[f], gravEnabled, isPlayer });
 		};
 
-		switch (isPlayer)
+		if (isPlayer)
 		{
-		case false:
-			// The cursor
-			MakeEntity(4, 0, 1, 5, Face::Floor, cube);
-		case true:
 			// The player. Offset the player from the cursor
 			for (auto &pc : cube)
 			{
@@ -312,13 +310,18 @@ public:
 			}
 			MakeEntity(6, 5, 4, 7, Face::North, cube);
 		}
+		else
+		{
+			// The cursor
+			MakeEntity(4, 0, 1, 5, Face::Floor, cube);
+			
+		}
 
 	}
 
-
 	void handleInput(PlayerKeysInUse key, float fTime)
 	{
-		
+
 		if (key.W.bHeld)	button_W.execute(player, fTime);
 		if (key.UP.bHeld)	button_UP.execute(player, fTime);
 		if (key.DOWN.bHeld) button_DOWN.execute(player, fTime);
@@ -329,7 +332,15 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		float x = ScreenHeight();
+		fAccumulatedTime += fElapsedTime;
+		if (fAccumulatedTime >= fTargetFrameTime)
+		{
+			fAccumulatedTime -= fTargetFrameTime;
+			fElapsedTime = fTargetFrameTime;
+		}
+		else
+			return true;
+
 
 		// Grab mouse for convenience
 		olc::vi2d vMouse = { GetMouseX(), GetMouseY() };
@@ -368,8 +379,8 @@ public:
 
 		if (GetKey(olc::Key::F3).bPressed) VTWEAK -= 1;
 		if (GetKey(olc::Key::F4).bPressed) VTWEAK += 1;
-		if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
-		if (GetKey(olc::Key::F6).bPressed) ev += 1;
+		//if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
+		//if (GetKey(olc::Key::F6).bPressed) ev += 1;
 
 		if (GetKey(olc::Key::F7).bHeld) TW += .01f;
 		if (GetKey(olc::Key::F8).bHeld) TW -= .01f;
@@ -481,7 +492,7 @@ public:
 		handleInput(keys, fElapsedTime);
 
 		//GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
-		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, fElapsedTime, player, true, true);
+		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, player, true, true);
 		for (auto& q : vQuads) {
 
 			// Draw the player's distance from the ground
@@ -577,37 +588,38 @@ public:
 		//DrawStringDecal({ 10 ,19 }, "" + std::to_string(), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,27 }, "Pos-X: " + std::to_string(player.posX), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,35 }, "Pos-Y: " + std::to_string(player.posY), olc::CYAN, { 0.72f, 0.72f });
-		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(player.DX), olc::CYAN, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,55 }, "DY: " + std::to_string(player.DY), olc::CYAN, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,62 }, "DT: " + std::to_string(player.DT), olc::CYAN, { 0.47f, 0.47f });
-		DrawLine(10, 70, 70, 70, olc::MAGENTA);
+		DrawStringDecal({ 10 ,48 }, "DX: " + std::to_string(player.DX), olc::CYAN, { 0.88f, 0.88f });
+		DrawStringDecal({ 10 ,56 }, "DY: " + std::to_string(player.DY), olc::CYAN, { 0.88f, 0.88f });
+		DrawStringDecal({ 10 ,64 }, "DT: " + std::to_string(player.DT), olc::CYAN, { 0.88f, 0.88f });
+		DrawStringDecal({ 10 ,72 }, "fTime: " + std::to_string(fElapsedTime), olc::CYAN, { 0.88f, 0.88f });
+		//DrawLine(10, 70, 70, 70, olc::MAGENTA);
 
-		DrawStringDecal({ 10,78 }, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
-		DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
-		DrawStringDecal({ 10 ,98 }, "Ascending: " + std::to_string(player.ascending), olc::GREEN, { 0.6f, 0.6f });
-		DrawStringDecal({ 10 ,119 }, "TW: " + std::to_string(TW), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,127 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,135 }, "tweak_x: " + std::to_string(tweak_x), olc::WHITE, { 0.47f, 0.47f });
-		DrawStringDecal({ 10 ,143 }, "tweak_y: " + std::to_string(tweak_y), olc::WHITE, { 0.47f, 0.47f });
+		//DrawStringDecal({ 10,78 }, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
+		//DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
+		//DrawStringDecal({ 10 ,98 }, "Ascending: " + std::to_string(player.ascending), olc::GREEN, { 0.6f, 0.6f });
+		//DrawStringDecal({ 10 ,119 }, "TW: " + std::to_string(TW), olc::WHITE, { 0.47f, 0.47f });
+		//DrawStringDecal({ 10 ,127 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
+		//DrawStringDecal({ 10 ,135 }, "tweak_x: " + std::to_string(tweak_x), olc::WHITE, { 0.47f, 0.47f });
+		//DrawStringDecal({ 10 ,143 }, "tweak_y: " + std::to_string(tweak_y), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,110 }, "Plane-2 VCells: " + std::to_string(world.plane_2.gps.vCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,130 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,140 }, "World VCells: " + std::to_string(world.allCells.size()), olc::WHITE, { 0.47f, 0.47f });
-		DrawLine(10, 148, 70, 148, olc::MAGENTA);
+		/*DrawLine(10, 148, 70, 148, olc::MAGENTA);
 		DrawStringDecal({ 10 ,154 }, "VC.x: " + std::to_string(vCalc(WORLD_WIDTH, vSpace.x, vSpace.y).x), olc::RED, { 0.47f, 0.47f });
 		DrawStringDecal({ 10 ,162 }, "Tile-Index: " + std::to_string(Tindex), olc::RED, { 0.47f, 0.47f });
 		DrawLine(10, 170, 70, 170, olc::MAGENTA);
 		DrawStringDecal({ 10 ,178 }, "Max Coordinates: (" + std::to_string(world.dimMax().x) + "," + std::to_string(world.dimMax().y) + ")", olc::RED, { 0.47f, 0.47f });
-
+*/
 		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f 
 		//DrawStringDecal({ 10,72 }, "Epoch-Modulus: " + std::to_string(EPOCH_MOD), olc::CYAN, { 0.5f, 0.5f });
-		DrawStringDecal({ 460,10 }, "(Unassigned) wShift: " + std::to_string(WORLD_SHIFT), olc::GREEN, { 0.7f, 0.7f });
+		/*DrawStringDecal({ 460,10 }, "(Unassigned) wShift: " + std::to_string(WORLD_SHIFT), olc::GREEN, { 0.7f, 0.7f });
 		DrawStringDecal({ 460,18 }, "(I-)(U+) Player Scale: " + std::to_string(PLAYER_SCALE), olc::GREEN, { 0.7f, 0.7f });
 		DrawStringDecal({ 460,26 }, "(K-)(L+) World Scale: " + std::to_string(WORLD_SCALE), olc::GREEN, { 0.7f, 0.7f });
 
 		DrawStringDecal({ 460,42 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::RED, { 0.7f, 0.7f });
 		DrawStringDecal({ 460,52 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::RED, { 0.7f, 0.7f });
 		DrawStringDecal({ 10, 480 }, "Player Cursor: " + std::to_string(player.location.x) + ", " + std::to_string(player.location.y), olc::RED, { 0.5f, 0.5f });
-
+*/
 		// Graceful exit if user is in full screen mode
 		return !GetKey(olc::Key::ESCAPE).bPressed;
 	}
