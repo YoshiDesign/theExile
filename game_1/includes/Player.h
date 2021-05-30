@@ -36,11 +36,10 @@ public:
 	float DT = 0.0f;
 
 	// Altitude
-	const int CRUISE_ALTITUDE = -20; // Thrust cutoff
-	//const float V_THRUST = 0.09f;	 // Rate of climb
-	const float V_THRUST = 0.4f;	 // Rate of climb
+	const int CRUISE_ALTITUDE = -100; // Thrust cutoff
+	const float V_THRUST = 0.1f;	 // Rate of climb
 	const float V_MAX = 0.4f;		 // Max vertical thrust
-	const float THRUST_WIDTH = CRUISE_ALTITUDE + (TW * CRUISE_ALTITUDE);
+	const float THRUST_WIDTH = CRUISE_ALTITUDE * 2 + CRUISE_ALTITUDE - (2 * V_THRUST * CRUISE_ALTITUDE);
 
 private:
 
@@ -88,15 +87,16 @@ public:
 		p1.Load(sFile);
 	}
 
-	void Update(float time, float vSpaceX, int ev = 0)
+	void Update(float fTime, float vSpaceX, int ev = 0)
 	{
+		// Tiles from the spritesheet
 		tile = { (int) ceil(vSpaceX * .1) % 6, ev };
 
 		// Calculate what's happening to the player
-		phys(time);
+		phys(fTime);
 
 		// Respond to latest calculations
-		movePlayer();
+		movePlayer(fTime);
 	}
 
 	// Button Down
@@ -202,23 +202,27 @@ public:
 		}
 
 		// TODO Camera motion while ascending / descending
-		if (altitude < CAMERA_ASCEND && ascending)
+		if (ascending && altitude < CRUISE_ALTITUDE - 12)
 		{
-			PLAYER_OFFSET_Y += 0.1 * V_MAX * fTime;	// DRY this
+			PLAYER_OFFSET_Y += (.01f * fTime) - (0.003 * DT);
 		}
-		// Start moving the camera down when the lastMax and current altitude differ by 10.0
-		else if (!ascending && (-1 * LastMaxAltitude) - (-1 * altitude) > 10.0f)
-		{
-			PLAYER_OFFSET_Y -= .01f * fTime;
+		else if (!ascending && altitude < CRUISE_ALTITUDE || PLAYER_OFFSET_Y > RESET_PLAYER_OFFSET_Y) {
+			PLAYER_OFFSET_Y -= .02f * fTime;
 		}
-		if (PLAYER_OFFSET_Y < 0.15f)
-		{
-			PLAYER_OFFSET_Y = RESET_PLAYER_OFFSET_Y;
-		}
+
+		// Start moving the camera down
+		//else if (!ascending && /*(-1 * LastMaxAltitude) - (-1 * altitude) > 10.0f */ altitude < CAMERA_ASCEND)
+		//{
+		//	PLAYER_OFFSET_Y = DT * fTime;
+		//}
+		//if (PLAYER_OFFSET_Y < 0)
+		//{
+		//	PLAYER_OFFSET_Y = RESET_PLAYER_OFFSET_Y;
+		//}
 
 	}
 
-	void movePlayer()
+	void movePlayer(float fTime)
 	{
 
 		// Increase or decrease our lower or upper world boudaries, respectively, to account for altitude

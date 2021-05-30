@@ -56,7 +56,7 @@ HUD STUFF
 
 float TW = 7.5f;
 
-//
+// Climb meter geometry
 const olc::vi2d tLEFT = {25,350};
 const olc::vi2d bLEFT = {19,370};
 const olc::vi2d tRIGHT = {bLEFT.x ,0};

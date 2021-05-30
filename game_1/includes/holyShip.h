@@ -176,6 +176,7 @@ public:
 		/*
 
 			Currently, this always returns the same visible faces
+			because I've disabled camera control
 
 		*/
 
@@ -332,14 +333,14 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		fAccumulatedTime += fElapsedTime;
-		if (fAccumulatedTime >= fTargetFrameTime)
-		{
-			fAccumulatedTime -= fTargetFrameTime;
-			fElapsedTime = fTargetFrameTime;
-		}
-		else
-			return true;
+		//fAccumulatedTime += fElapsedTime;
+		//if (fAccumulatedTime >= fTargetFrameTime)
+		//{
+		//	fAccumulatedTime -= fTargetFrameTime;
+		//	fElapsedTime = fTargetFrameTime;
+		//}
+		//else
+		//	return true;
 
 
 		// Grab mouse for convenience
@@ -360,8 +361,8 @@ public:
 		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
 
 		// QZ Keys to zoom in or out
-		//if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
-		// if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
+		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
+		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
 
 		//if (GetKey(olc::Key::R).bPressed)
 			//resetCamera();
@@ -379,8 +380,8 @@ public:
 
 		if (GetKey(olc::Key::F3).bPressed) VTWEAK -= 1;
 		if (GetKey(olc::Key::F4).bPressed) VTWEAK += 1;
-		//if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
-		//if (GetKey(olc::Key::F6).bPressed) ev += 1;
+		if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
+		if (GetKey(olc::Key::F6).bPressed) ev += 1;
 
 		if (GetKey(olc::Key::F7).bHeld) TW += .01f;
 		if (GetKey(olc::Key::F8).bHeld) TW -= .01f;
@@ -525,39 +526,48 @@ public:
 		}
 
 		vQuads.clear();
+
 		/*
 		   HUD
 		*/
-
 		if (player.DT == 0.0)
 			DrawStringDecal({ 20 ,340 }, "V" + std::to_string((int)floor(1.8 * (int)ceil(player.DT * 100))), olc::WHITE, { 0.72f, 0.72f });
 		else
 			DrawStringDecal({ 20 ,340 }, "V" + std::to_string((int)floor(-1.8 * (int)ceil(player.DT * 100))), olc::WHITE, { 0.72f, 0.72f });
 
 		/*
-			Thrust monitor
+			Climb Meter
 			The length depends upon the relationship between TW and CRUISE_ALTITUDE
 			where TW * CRUISE_ALTITUDE + tLEFT.x is the distance from the start of the meter
 		*/
-		DrawLine(25, 350, tLEFT.x + (-(TW * player.CRUISE_ALTITUDE)), 350, olc::MAGENTA);	// Top
+		DrawLine(25, 350, tLEFT.x + -player.THRUST_WIDTH, 350, olc::MAGENTA);	// Top
 		DrawLine(tLEFT.x, 350, bLEFT.x, 370, olc::MAGENTA);	// Left Side
-		DrawLine(20, 370, bLEFT.x + (-(TW * player.CRUISE_ALTITUDE)), 370, olc::MAGENTA);	// Bottom
-		DrawLine(tLEFT.x + (-(TW * player.CRUISE_ALTITUDE)), 350, bLEFT.x + (-(TW * player.CRUISE_ALTITUDE)), 370, olc::MAGENTA); // Right side
+		DrawLine(20, 370, bLEFT.x + -player.THRUST_WIDTH, 370, olc::MAGENTA);	// Bottom
+		DrawLine(tLEFT.x + -player.THRUST_WIDTH, 350, bLEFT.x + -player.THRUST_WIDTH, 370, olc::MAGENTA); // Right side
 
-		float r2 = 20 * 20;
-		float x1 = -20 - (420 * player.DT);
-		float y1 = (int)sqrt(r2 - x1 * x1) + 0.1;
-
-		DrawLine(70 + x1, 349 - y1, 27 - player.CRUISE_ALTITUDE * 2, 348, olc::WHITE);
+		//float r2 = player.DT * 50;
+		//float x1 = -50 - (600 * player.DT);
+		//float y1 = (int)sqrt(r2 - x1 * x1) + 0.1;
+		//DrawLine(70 + x1, 349 - y1, 27 - player.CRUISE_ALTITUDE * 2, 348, olc::WHITE);
 
 		//DrawRect({20,350}, {130,20}, olc::MAGENTA);
 
-		for (int i = 1; i <= (int)-player.altitude; i++) {
-			DrawLine(25 + (i * 2), 352, 20 + (i * 2), 368, olc::Pixel(255, 200 - (i * 3 >= 200 ? 200 : i * 3), 0));
+		for (int i = 1 , j = 0; i <= (int)-player.altitude; i++) {
+			if (i % 2 == 0) {
+				if (i < -player.CRUISE_ALTITUDE) 
+				{
+					DrawLine(25 + (i * 2) / 2, 352, 20 + (i * 2) / 2, 368, olc::Pixel(7, 248, 73));
+				}
+				else
+				{
+					DrawLine(25 + (i * 2) / 2, 352, 20 + (i * 2) / 2, 368, olc::Pixel(7, 248 - (j * 3 >= 73 ? 73 : j * 3), 73 + j));
+					j+=2;
+				}
+			}
 		}
 
 		// Thrust Cutoff
-		DrawLine(27 - player.CRUISE_ALTITUDE * 2, 348, 19 - player.CRUISE_ALTITUDE * 2, 370, olc::WHITE);
+		DrawLine(26 - player.CRUISE_ALTITUDE, 348, 19 - player.CRUISE_ALTITUDE, 370, olc::WHITE);
 
 		/*
 			ENDHUD
@@ -583,7 +593,7 @@ public:
 		/*
 			7) Draw some debug info
 		*/
-		DrawStringDecal({ 10,10 }, "Score: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.72f, 0.72f });
+		DrawStringDecal({ 10,18 }, "Score: " + std::to_string((int)vSpace.x), olc::CYAN, { 0.72f, 0.72f });
 		//DrawStringDecal({ 300,10 }, "MOD: " + std::to_string((int)(vSpace.x / 10) % 6), olc::CYAN, { 0.72f, 0.72f });
 		//DrawStringDecal({ 10 ,19 }, "" + std::to_string(), olc::CYAN, { 0.72f, 0.72f });
 		DrawStringDecal({ 10 ,27 }, "Pos-X: " + std::to_string(player.posX), olc::CYAN, { 0.72f, 0.72f });
@@ -594,9 +604,11 @@ public:
 		DrawStringDecal({ 10 ,72 }, "fTime: " + std::to_string(fElapsedTime), olc::CYAN, { 0.88f, 0.88f });
 		//DrawLine(10, 70, 70, 70, olc::MAGENTA);
 
-		//DrawStringDecal({ 10,78 }, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
-		//DrawStringDecal({ 10 ,91 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
-		//DrawStringDecal({ 10 ,98 }, "Ascending: " + std::to_string(player.ascending), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10,82 }, "Epoch: " + std::to_string(EPOCH), olc::WHITE, { 1.1f, 1.1f });
+		DrawStringDecal({ 10 ,98 }, "Altitude: " + std::to_string(player.altitude), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,106 }, "pAltitude: " + std::to_string(player.pAltitude), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,114 }, "Ascending: " + std::to_string(player.ascending), olc::GREEN, { 0.6f, 0.6f });
+		DrawStringDecal({ 10 ,122 }, "Offset-Y: " + std::to_string(player.PLAYER_OFFSET_Y), olc::CYAN, { 0.6f, 0.6f });
 		//DrawStringDecal({ 10 ,119 }, "TW: " + std::to_string(TW), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,127 }, "V-TWEAK: " + std::to_string(VTWEAK), olc::WHITE, { 0.47f, 0.47f });
 		//DrawStringDecal({ 10 ,135 }, "tweak_x: " + std::to_string(tweak_x), olc::WHITE, { 0.47f, 0.47f });

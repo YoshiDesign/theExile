@@ -61,9 +61,6 @@
 #include "includes/holyShip.h"
 #include "includes/Helpers.h"
 
-
-
-
 int main()
 {
 	holyShip demo;
