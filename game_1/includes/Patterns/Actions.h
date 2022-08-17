@@ -42,11 +42,6 @@ public:
 
 };
 
-class PhysCommand : public Command
-{
-	
-};
-
 class EmptyCommand : public Command
 {
 public:

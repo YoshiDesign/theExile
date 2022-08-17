@@ -169,7 +169,7 @@ public:
 
 			// We don't need to worry about the 2nd half, right?
 			std::copy(std::begin(plane_2.gps.vCells), std::end(plane_2.gps.vCells), last);
-			std::cout << "Updated with new clout." << std::endl;
+			//std::cout << "Updated with new clout." << std::endl;
 		}
 
 	}

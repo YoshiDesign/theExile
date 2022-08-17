@@ -29,7 +29,7 @@ public:
 
 	holyShip()
 	{
-		sAppName = "YTE";
+		sAppName = "Holy Ship!";
 	}
 
 	float fTargetFrameTime = 1.0f / 61.0f; // Virtual FPS of 61fps
@@ -52,8 +52,6 @@ public:
 	//Renderable rendPlayer;
 	Renderable rendAllWalls;
 	vec3d vSpace;	// Initialized using the camera's initial vector. Used to move the world in relation to the camera
-	
-
 
 	// 1 World has gone by
 	int vSpaceMod = vCalc(WORLD_WIDTH * 2, vSpace.x, vSpace.y).x / 100;
@@ -331,80 +329,9 @@ public:
 
 	}
 
-	bool OnUserUpdate(float fElapsedTime) override
+
+	void drawScene(float fElapsedTime) 
 	{
-		//fAccumulatedTime += fElapsedTime;
-		//if (fAccumulatedTime >= fTargetFrameTime)
-		//{
-		//	fAccumulatedTime -= fTargetFrameTime;
-		//	fElapsedTime = fTargetFrameTime;
-		//}
-		//else
-		//	return true;
-
-
-		// Grab mouse for convenience
-		olc::vi2d vMouse = { GetMouseX(), GetMouseY() };
-
-		keys.W = GetKey(olc::Key::W);
-		keys.UP = GetKey(olc::Key::UP);
-		keys.DOWN = GetKey(olc::Key::DOWN);
-		keys.LEFT = GetKey(olc::Key::LEFT);
-		keys.RIGHT = GetKey(olc::Key::RIGHT);
-
-		// WS keys to tilt camera
-		if (GetKey(olc::Key::Q).bHeld) fCameraPitch += 1.0f * fElapsedTime;
-		if (GetKey(olc::Key::S).bHeld) fCameraPitch -= 1.0f * fElapsedTime;
-
-		//// DA Keys to manually rotate camera
-		if (GetKey(olc::Key::D).bHeld) fCameraAngleTarget += 1.0f * fElapsedTime;
-		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
-
-		// QZ Keys to zoom in or out
-		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
-		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
-
-		//if (GetKey(olc::Key::R).bPressed)
-			//resetCamera();
-
-		if (GetKey(olc::Key::I).bPressed) PLAYER_SCALE--;
-		if (GetKey(olc::Key::U).bPressed) PLAYER_SCALE++;
-		if (GetKey(olc::Key::L).bPressed) WORLD_SCALE++;
-		if (GetKey(olc::Key::K).bPressed) WORLD_SCALE--;
-
-		//if (GetKey(olc::Key::X).bHeld) DX += 1.0f;
-		//if (GetKey(olc::Key::Z).bHeld) DX -= 1.0f;
-		//if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
-		//if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
-		if (GetKey(olc::Key::F).bHeld) Tindex += 1;
-
-		if (GetKey(olc::Key::F3).bPressed) VTWEAK -= 1;
-		if (GetKey(olc::Key::F4).bPressed) VTWEAK += 1;
-		if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
-		if (GetKey(olc::Key::F6).bPressed) ev += 1;
-
-		if (GetKey(olc::Key::F7).bHeld) TW += .01f;
-		if (GetKey(olc::Key::F8).bHeld) TW -= .01f;
-
-		// Smooth camera
-		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
-
-		/*if (player.vCursor.x < 0) player.vCursor.x = 0;
-		if (player.vCursor.y < 0 - WIGGLE_ROOM_TOP) player.vCursor.y = 0;
-		if (player.vCursor.x >= world.size.x) player.vCursor.x = world.size.x - 1;
-		if (player.vCursor.y >= world.size.y + WIGGLE_ROOM_BOTTOM) player.vCursor.y = world.size.y - 1 + WIGGLE_ROOM_BOTTOM;*/
-
-		// Alter VSpace - This moves the map
-		vSpace.x += (int)player.VSPEED_X * fElapsedTime;
-
-		// Passing the 2nd Plane
-		if ((int)vSpace.x > 0 && (int)ceil(vSpace.x / 100) % (int)(vSpaceMod + ceil((ScreenWidth() / 55))) == 0)
-		{
-			EPOCH++;
-			vSpace.x = VTWEAK;
-			std::cout << "Updating Planes..." << std::endl;
-			world.UpdateWorld(3);
-		}
 
 		/*
 			Create dummy cube to extract visible face information
@@ -489,9 +416,6 @@ public:
 			6) Draw Player
 		*/
 
-		player.Update(fElapsedTime, vSpace.x, ev);
-		handleInput(keys, fElapsedTime);
-
 		//GetPlayerQuads(player.vCursor, fCameraAngle, fCameraPitch, fCameraZoom, { vCameraPos.x, 0.0f, vCameraPos.y }, vQuads, fElapsedTime);
 		GetPlayerQuads(player.location, fCameraAngle, fCameraPitch, fCameraZoom, { 0.0f, 0.0f, 0.0f }, vQuads, player, true, true);
 		for (auto& q : vQuads) {
@@ -525,11 +449,21 @@ public:
 
 		}
 
+
 		vQuads.clear();
 
+
+		drawHud(fElapsedTime);
+
+
+	}
+
+
+	void drawHud(float fElapsedTime)
+	{
 		/*
-		   HUD
-		*/
+			   HUD
+			*/
 		if (player.DT == 0.0)
 			DrawStringDecal({ 20 ,340 }, "V" + std::to_string((int)floor(1.8 * (int)ceil(player.DT * 100))), olc::WHITE, { 0.72f, 0.72f });
 		else
@@ -552,16 +486,16 @@ public:
 
 		//DrawRect({20,350}, {130,20}, olc::MAGENTA);
 
-		for (int i = 1 , j = 0; i <= (int)-player.altitude; i++) {
+		for (int i = 1, j = 0; i <= (int)-player.altitude; i++) {
 			if (i % 2 == 0) {
-				if (i < -player.CRUISE_ALTITUDE) 
+				if (i < -player.CRUISE_ALTITUDE)
 				{
 					DrawLine(25 + (i * 2) / 2, 352, 20 + (i * 2) / 2, 368, olc::Pixel(7, 248, 73));
 				}
 				else
 				{
 					DrawLine(25 + (i * 2) / 2, 352, 20 + (i * 2) / 2, 368, olc::Pixel(7, 248 - (j * 3 >= 73 ? 73 : j * 3), 73 + j));
-					j+=2;
+					j += 2;
 				}
 			}
 		}
@@ -621,7 +555,7 @@ public:
 		DrawStringDecal({ 10 ,162 }, "Tile-Index: " + std::to_string(Tindex), olc::RED, { 0.47f, 0.47f });
 		DrawLine(10, 170, 70, 170, olc::MAGENTA);
 		DrawStringDecal({ 10 ,178 }, "Max Coordinates: (" + std::to_string(world.dimMax().x) + "," + std::to_string(world.dimMax().y) + ")", olc::RED, { 0.47f, 0.47f });
-*/
+		*/
 		//DrawStringDecal({ 10,8 }, "Angle: " + std::to_string(fCameraAngle) + ", " + std::to_string(fCameraPitch), olc::YELLOW, { 0.5f, 0.5f 
 		//DrawStringDecal({ 10,72 }, "Epoch-Modulus: " + std::to_string(EPOCH_MOD), olc::CYAN, { 0.5f, 0.5f });
 		/*DrawStringDecal({ 460,10 }, "(Unassigned) wShift: " + std::to_string(WORLD_SHIFT), olc::GREEN, { 0.7f, 0.7f });
@@ -631,7 +565,92 @@ public:
 		DrawStringDecal({ 460,42 }, "World Width: " + std::to_string(WORLD_WIDTH), olc::RED, { 0.7f, 0.7f });
 		DrawStringDecal({ 460,52 }, "World Height: " + std::to_string(WORLD_HEIGHT), olc::RED, { 0.7f, 0.7f });
 		DrawStringDecal({ 10, 480 }, "Player Cursor: " + std::to_string(player.location.x) + ", " + std::to_string(player.location.y), olc::RED, { 0.5f, 0.5f });
-*/
+		*/
+	
+	}
+
+	bool OnUserUpdate(float fElapsedTime) override
+	{
+
+		// Grab mouse for convenience
+		olc::vi2d vMouse = { GetMouseX(), GetMouseY() };
+
+		//keys.W = GetKey(olc::Key::W);
+		keys.UP = GetKey(olc::Key::UP);
+		keys.DOWN = GetKey(olc::Key::DOWN);
+		keys.LEFT = GetKey(olc::Key::LEFT);
+		keys.RIGHT = GetKey(olc::Key::RIGHT);
+
+		// WS keys to tilt camera
+		if (GetKey(olc::Key::W).bHeld) fCameraPitch += 1.0f * fElapsedTime;
+		if (GetKey(olc::Key::S).bHeld) fCameraPitch -= 1.0f * fElapsedTime;
+
+		//// DA Keys to manually rotate camera
+		if (GetKey(olc::Key::D).bHeld) fCameraAngleTarget += 1.0f * fElapsedTime;
+		if (GetKey(olc::Key::A).bHeld) fCameraAngleTarget -= 1.0f * fElapsedTime;
+
+		// QZ Keys to zoom in or out
+		if (GetKey(olc::Key::Q).bHeld) fCameraZoom += 5.0f * fElapsedTime;
+		if (GetKey(olc::Key::Z).bHeld) fCameraZoom -= 5.0f * fElapsedTime;
+
+		//if (GetKey(olc::Key::R).bPressed)
+			//resetCamera();
+
+		if (GetKey(olc::Key::I).bPressed) PLAYER_SCALE--;
+		if (GetKey(olc::Key::U).bPressed) PLAYER_SCALE++;
+		if (GetKey(olc::Key::L).bPressed) WORLD_SCALE++;
+		if (GetKey(olc::Key::K).bPressed) WORLD_SCALE--;
+
+		//if (GetKey(olc::Key::X).bHeld) DX += 1.0f;
+		//if (GetKey(olc::Key::Z).bHeld) DX -= 1.0f;
+		//if (GetKey(olc::Key::C).bHeld) DY -= 1.0f;
+		//if (GetKey(olc::Key::V).bHeld) DY += 1.0f;
+		if (GetKey(olc::Key::F).bHeld) Tindex += 1;
+
+		if (GetKey(olc::Key::F3).bPressed) VTWEAK -= 1;
+		if (GetKey(olc::Key::F4).bPressed) VTWEAK += 1;
+		if (GetKey(olc::Key::F5).bPressed) ev -= 1 || 0;
+		if (GetKey(olc::Key::F6).bPressed) ev += 1;
+
+		if (GetKey(olc::Key::F7).bHeld) TW += .01f;
+		if (GetKey(olc::Key::F8).bHeld) TW -= .01f;
+
+		// Smooth camera
+		fCameraAngle += (fCameraAngleTarget - fCameraAngle) * 10.0f * fElapsedTime;
+
+		/*if (player.vCursor.x < 0) player.vCursor.x = 0;
+		if (player.vCursor.y < 0 - WIGGLE_ROOM_TOP) player.vCursor.y = 0;
+		if (player.vCursor.x >= world.size.x) player.vCursor.x = world.size.x - 1;
+		if (player.vCursor.y >= world.size.y + WIGGLE_ROOM_BOTTOM) player.vCursor.y = world.size.y - 1 + WIGGLE_ROOM_BOTTOM;*/
+
+		fAccumulatedTime += fElapsedTime;
+		if (fAccumulatedTime >= fTargetFrameTime)
+		{
+			drawScene(fElapsedTime);
+			player.Update(fElapsedTime, vSpace.x, ev);
+			handleInput(keys, fElapsedTime);
+			fAccumulatedTime -= fTargetFrameTime;
+			fElapsedTime = fTargetFrameTime;
+
+			// Alter VSpace - This moves the map
+			vSpace.x += (int)player.VSPEED_X * fElapsedTime;
+
+			// Passing the 2nd Plane
+			if ((int)vSpace.x > 0 && (int)ceil(vSpace.x / 100) % (int)(vSpaceMod + ceil((ScreenWidth() / 55))) == 0)
+			{
+				EPOCH++;
+				vSpace.x = VTWEAK;
+				std::cout << "Updating Planes..." << std::endl;
+				world.UpdateWorld(3);
+			}
+
+		}
+		else {
+			// Draw but do not calculate
+			drawScene(fElapsedTime);
+			return true;
+		}
+
 		// Graceful exit if user is in full screen mode
 		return !GetKey(olc::Key::ESCAPE).bPressed;
 	}

@@ -37,7 +37,7 @@ public:
 
 	// Altitude
 	const int CRUISE_ALTITUDE = -100; // Thrust cutoff
-	const float V_THRUST = 0.1f;	 // Rate of climb
+	const float V_THRUST = 2.0f;	 // Rate of climb
 	const float V_MAX = 0.4f;		 // Max vertical thrust
 	const float THRUST_WIDTH = CRUISE_ALTITUDE * 2 + CRUISE_ALTITUDE - (2 * V_THRUST * CRUISE_ALTITUDE);
 
@@ -103,8 +103,8 @@ public:
 	void moveNear(float fElapsedTime)
 	{
 		if (posY <= _PLAYER_Y_MAX) {
-			DX -= speed * fElapsedTime;
-			DY += speed * fElapsedTime;
+			DX -= speed;
+			DY += speed;
 		}
 
 	}
@@ -114,8 +114,8 @@ public:
 	{
 		if (posY >= _PLAYER_Y_MIN) 
 		{
-			DX += speed * fElapsedTime;
-			DY -= speed * fElapsedTime;
+			DX += speed;
+			DY -= speed;
 		}
 	}
 
@@ -123,8 +123,8 @@ public:
 	void throttleUp(float fElapsedTime)
 	{
 		if (VSPEED_X <= PLAYER_MAX_SPEED) {
-			VSPEED_X += VSPEED_DELTA * fElapsedTime;
-			PLAYER_OFFSET_X += VSPEED_OFFSET * fElapsedTime;
+			VSPEED_X += VSPEED_DELTA;
+			PLAYER_OFFSET_X += VSPEED_OFFSET;
 		}
 	}
 
@@ -132,8 +132,8 @@ public:
 	void throttleDown(float fElapsedTime)
 	{
 		if (VSPEED_X >= PLAYER_MIN_SPEED) {
-			VSPEED_X -= VSPEED_DELTA * fElapsedTime;
-			PLAYER_OFFSET_X -= VSPEED_OFFSET * fElapsedTime;
+			VSPEED_X -= VSPEED_DELTA;
+			PLAYER_OFFSET_X -= VSPEED_OFFSET;
 		}
 	}
 
@@ -142,7 +142,7 @@ public:
 	{
 		if (altitude > CRUISE_ALTITUDE) 
 		{  
-			DT -= V_THRUST * fElapsedTime;
+			DT -= V_THRUST;
 		}
 
 	}
@@ -230,15 +230,15 @@ public:
 		PLAYER_Y_MAX = PLAYER_STATIC_Y_MAX - altitude;
 
 		// Determine vector deltas
-		DT = DT < 1 && DT > -V_MAX ? DT : DT < -V_MAX ? -V_MAX : DT > 1 ? V_MAX : DT;
-		DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
-		DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
+		//DT = DT < 1 && DT > -V_MAX ? DT : DT < -V_MAX ? -V_MAX : DT > 1 ? V_MAX : DT;
+		//DY = DY < 1 && DY > -1 ? DY : DY < -1 ? -1 : DY > 1 ? 1 : DY;
+		//DX = DX < 1 && DX > -1 ? DX : DX < -1 ? -1 : DX > 1 ? 1 : DX;
 
 		// Apply vector deltas
-		posY += DY;
-		posX += DX;
+		posY += DY * fTime;
+		posX += DX * fTime;
 		pAltitude = altitude;
-		altitude += DT;
+		altitude += DT * fTime;
 
 	}
 
